@@ -1,23 +1,302 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   CometChatConversations,
   CometChatMessageList,
   CometChatMessageComposer,
   CometChatMessageHeader,
   CometChatUIKit,
+  CometChatGroups,
 } from '@cometchat/chat-uikit-react';
+import { CometChat } from '@cometchat/chat-sdk-javascript';
 import './ChatApp.css';
 
-// ARCALINK: Role labels in pt-BR
 const ROLE_LABELS = { medico: 'Médico', paciente: 'Paciente' };
-
-// ARCALINK: Bottom Tab definitions
 const TABS = [
-  { id: 'chats',    label: 'Conversas', icon: '💬' },
-  { id: 'groups',   label: 'Grupos',    icon: '👥' },
-  { id: 'profile',  label: 'Perfil',    icon: '👤' },
+  { id: 'chats',   label: 'Conversas', icon: '💬' },
+  { id: 'groups',  label: 'Grupos',    icon: '👥' },
+  { id: 'profile', label: 'Perfil',    icon: '👤' },
 ];
 
+/* ─────────────────────────────────────────────
+   SUB-COMPONENT: Modal de Nova Conversa
+   Permite ao médico buscar um usuário e iniciar
+   uma conversa direta
+───────────────────────────────────────────── */
+function NewChatModal({ onClose, onUserSelected }) {
+  const [query, setQuery] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Carrega todos os usuários ao abrir
+  useEffect(() => {
+    fetchUsers('');
+  }, []);
+
+  const fetchUsers = async (q) => {
+    setLoading(true);
+    try {
+      const me = await CometChatUIKit.getLoggedinUser();
+      const req = new CometChat.UsersRequestBuilder()
+        .setLimit(50)
+        .setSearchKeyword(q.trim())
+        .build();
+      const result = await req.fetchNext();
+      // Filtrar usuário logado da lista
+      setUsers(result.filter((u) => u.getUid() !== me?.getUid()));
+    } catch (e) {
+      console.error('ArcaLink: erro ao buscar usuários', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    fetchUsers(val);
+  };
+
+  const roleOf = (u) => ROLE_LABELS[u.getRole()] ?? u.getRole() ?? '';
+  const colorOf = (u) => u.getRole() === 'medico' ? '#2D9E6B' : '#1A4A7A';
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+        {/* Handle */}
+        <div className="modal-handle" />
+
+        {/* Header */}
+        <div className="modal-header">
+          <span className="modal-title">Nova Conversa</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Search */}
+        <div className="modal-search-wrap">
+          <input
+            className="modal-search-input"
+            type="text"
+            placeholder="Buscar por nome..."
+            value={query}
+            onChange={handleSearch}
+            autoFocus
+          />
+        </div>
+
+        {/* User list */}
+        <div className="modal-list">
+          {loading && <p className="modal-loading">Buscando...</p>}
+          {!loading && users.length === 0 && (
+            <p className="modal-empty">Nenhum usuário encontrado.</p>
+          )}
+          {users.map((u) => (
+            <button
+              key={u.getUid()}
+              className="modal-user-row"
+              onClick={() => onUserSelected(u)}
+            >
+              <div
+                className="modal-avatar"
+                style={{ background: colorOf(u) }}
+              >
+                {u.getName().charAt(0).toUpperCase()}
+              </div>
+              <div className="modal-user-info">
+                <span className="modal-user-name">{u.getName()}</span>
+                <span className="modal-user-role" style={{ color: colorOf(u) }}>
+                  {roleOf(u)}
+                </span>
+              </div>
+              <span
+                className={`modal-status-dot ${u.getStatus() === 'online' ? 'online' : 'offline'}`}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SUB-COMPONENT: Modal Criar Grupo Médico
+   Grupos são SEMPRE do tipo PRIVATE no ArcaLink
+───────────────────────────────────────────── */
+function CriarGrupoModal({ onClose, onGroupCreated }) {
+  const [groupName, setGroupName] = useState('Consulta — ');
+  const [patientQuery, setPatientQuery] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+
+  const searchPatients = async (q) => {
+    if (q.trim().length < 1) { setPatients([]); return; }
+    setSearchLoading(true);
+    try {
+      const req = new CometChat.UsersRequestBuilder()
+        .setLimit(20)
+        .setSearchKeyword(q.trim())
+        .build();
+      const result = await req.fetchNext();
+      // ARCALINK: mostrar todos os usuários (pacientes + outros médicos)
+      setPatients(result);
+    } catch (e) {
+      console.error('ArcaLink: erro ao buscar pacientes', e);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectPatient = (u) => {
+    setSelectedPatient(u);
+    setPatientQuery(u.getName());
+    setPatients([]);
+    // Sugestão automática de nome do grupo
+    if (groupName === 'Consulta — ' || groupName.startsWith('Consulta — ')) {
+      setGroupName(`Consulta — ${u.getName()}`);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!groupName.trim()) { setError('Informe o nome do grupo.'); return; }
+    setError('');
+    setCreating(true);
+    try {
+      // ARCALINK: grupos são SEMPRE PRIVATE
+      const GUID = `arcalink_${Date.now()}`;
+      const group = new CometChat.Group(
+        GUID,
+        groupName.trim(),
+        CometChat.GROUP_TYPE.PRIVATE,
+        ''
+      );
+      const created = await CometChat.createGroup(group);
+
+      // Adicionar paciente selecionado como PARTICIPANT
+      if (selectedPatient) {
+        const member = new CometChat.GroupMember(
+          selectedPatient.getUid(),
+          CometChat.GROUP_MEMBER_SCOPE.PARTICIPANT
+        );
+        await CometChat.addMembersToGroup(created.getGuid(), [member], []);
+      }
+
+      onGroupCreated(created);
+    } catch (e) {
+      console.error('ArcaLink: erro ao criar grupo', e);
+      setError('Erro ao criar grupo. Tente novamente.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const roleOf = (u) => ROLE_LABELS[u.getRole()] ?? u.getRole() ?? '';
+  const colorOf = (u) => u.getRole() === 'medico' ? '#2D9E6B' : '#1A4A7A';
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-handle" />
+
+        <div className="modal-header">
+          <span className="modal-title">Novo Grupo Médico</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Private badge */}
+        <div className="modal-private-badge">
+          🔒 Grupo Privado — somente convidados
+        </div>
+
+        {/* Group name */}
+        <div className="modal-field">
+          <label className="modal-field-label">Nome do Grupo *</label>
+          <input
+            className="modal-field-input"
+            type="text"
+            value={groupName}
+            onChange={(e) => { setGroupName(e.target.value); setError(''); }}
+            placeholder="Ex: Consulta — Nome do Paciente"
+          />
+        </div>
+
+        {/* Patient search */}
+        <div className="modal-field" style={{ position: 'relative' }}>
+          <label className="modal-field-label">Adicionar Participante</label>
+          <div className="modal-search-wrap">
+            <input
+              className="modal-search-input"
+              type="text"
+              placeholder="Buscar por nome..."
+              value={patientQuery}
+              onChange={(e) => {
+                setPatientQuery(e.target.value);
+                setSelectedPatient(null);
+                searchPatients(e.target.value);
+              }}
+            />
+            {selectedPatient && (
+              <button
+                className="modal-clear-patient"
+                onClick={() => { setSelectedPatient(null); setPatientQuery(''); setPatients([]); }}
+              >✕</button>
+            )}
+          </div>
+
+          {/* Dropdown de resultados */}
+          {patients.length > 0 && (
+            <div className="modal-dropdown">
+              {searchLoading && <p className="modal-loading">Buscando...</p>}
+              {patients.map((u) => (
+                <button
+                  key={u.getUid()}
+                  className="modal-user-row compact"
+                  onClick={() => handleSelectPatient(u)}
+                >
+                  <div className="modal-avatar small" style={{ background: colorOf(u) }}>
+                    {u.getName().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="modal-user-info">
+                    <span className="modal-user-name">{u.getName()}</span>
+                    <span className="modal-user-role" style={{ color: colorOf(u) }}>
+                      {roleOf(u)}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Participante selecionado */}
+          {selectedPatient && (
+            <div className="modal-selected-patient">
+              <div className="modal-avatar small" style={{ background: colorOf(selectedPatient) }}>
+                {selectedPatient.getName().charAt(0).toUpperCase()}
+              </div>
+              <span>{selectedPatient.getName()} selecionado(a)</span>
+            </div>
+          )}
+        </div>
+
+        {error && <p className="modal-error">{error}</p>}
+
+        <button
+          className={`modal-create-btn${creating ? ' loading' : ''}`}
+          onClick={handleCreate}
+          disabled={creating}
+        >
+          {creating ? <span className="btn-spin-dark" /> : 'Criar Grupo'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   MAIN COMPONENT: ChatApp
+───────────────────────────────────────────── */
 function ChatApp({ onLogout }) {
   const [loggedUser, setLoggedUser] = useState(null);
   const [activeTab, setActiveTab] = useState('chats');
@@ -25,25 +304,37 @@ function ChatApp({ onLogout }) {
   const [activeGroup, setActiveGroup] = useState(null);
   const [inChatView, setInChatView] = useState(false);
 
+  // Modals
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [showCriarGrupo, setShowCriarGrupo] = useState(false);
+
   useEffect(() => {
     CometChatUIKit.getLoggedinUser().then((u) => { if (u) setLoggedUser(u); });
   }, []);
 
   const isMedico = loggedUser?.getRole?.() === 'medico';
-  const roleLabel = ROLE_LABELS[loggedUser?.getRole?.()] ?? loggedUser?.getRole?.() ?? '';
+  const roleLabel = ROLE_LABELS[loggedUser?.getRole?.()] ?? '';
   const userName = loggedUser?.getName?.() ?? '';
   const initial = userName.charAt(0).toUpperCase() || 'U';
 
+  // ── Navigation handlers ──
+  const openChat = useCallback((user, group) => {
+    setActiveUser(user || null);
+    setActiveGroup(group || null);
+    setInChatView(true);
+    setActiveTab('chats');
+  }, []);
+
   const handleConversationClick = (conversation) => {
     const type = conversation.getConversationType();
-    if (type === 'user') {
-      setActiveUser(conversation.getConversationWith());
-      setActiveGroup(null);
-    } else {
-      setActiveGroup(conversation.getConversationWith());
-      setActiveUser(null);
-    }
-    setInChatView(true);
+    openChat(
+      type === 'user'  ? conversation.getConversationWith() : null,
+      type === 'group' ? conversation.getConversationWith() : null,
+    );
+  };
+
+  const handleGroupItemClick = (group) => {
+    openChat(null, group);
   };
 
   const handleBack = () => {
@@ -58,15 +349,26 @@ function ChatApp({ onLogout }) {
     }
   };
 
+  // ── Modal handlers ──
+  const handleUserSelected = (user) => {
+    setShowNewChat(false);
+    openChat(user, null);
+  };
+
+  const handleGroupCreated = (group) => {
+    setShowCriarGrupo(false);
+    // Navegar direto para o grupo criado
+    openChat(null, group);
+  };
+
   const hasActiveChat = activeUser || activeGroup;
 
-  /* ── RENDER helpers ── */
+  /* ── RENDER: Conversas ── */
   const renderChats = () => (
     <div className="tab-content">
-      {/* In-chat view (messages) */}
       {inChatView && hasActiveChat ? (
+        // Tela de mensagens
         <div className="chat-view">
-          {/* Header com voltar */}
           <div className="chat-view-header">
             <button className="back-arrow" onClick={handleBack}>←</button>
             <div className="chat-view-header-content">
@@ -90,10 +392,20 @@ function ChatApp({ onLogout }) {
           </div>
         </div>
       ) : (
-        /* Conversations list */
+        // Lista de conversas
         <div className="conversations-view">
           <div className="tab-header">
             <span className="tab-header-title">Conversas</span>
+            {/* ARCALINK: Médico pode iniciar nova conversa */}
+            {isMedico && (
+              <button
+                className="tab-header-action"
+                title="Nova Conversa"
+                onClick={() => setShowNewChat(true)}
+              >
+                +
+              </button>
+            )}
           </div>
           <div className="cometchat-list-wrap">
             <CometChatConversations onItemClick={handleConversationClick} />
@@ -103,34 +415,53 @@ function ChatApp({ onLogout }) {
     </div>
   );
 
+  /* ── RENDER: Grupos ── */
   const renderGroups = () => (
     <div className="tab-content">
-      <div className="tab-header">
-        <span className="tab-header-title">Grupos</span>
-        {isMedico && (
-          <button className="tab-header-action" title="Novo Grupo Médico">+</button>
-        )}
-      </div>
-      <div className="groups-placeholder">
-        <div className="placeholder-icon">👥</div>
-        <p className="placeholder-title">Seus grupos médicos</p>
-        <p className="placeholder-sub">
-          {isMedico
-            ? 'Crie grupos privados para cada consulta tocando em "+"'
-            : 'Você participará dos grupos em que for adicionado pelo médico'}
-        </p>
-      </div>
+      {inChatView && hasActiveChat ? (
+        // Tela de mensagens de grupo (quando vem de Grupos)
+        <div className="chat-view">
+          <div className="chat-view-header">
+            <button className="back-arrow" onClick={handleBack}>←</button>
+            <div className="chat-view-header-content">
+              <CometChatMessageHeader group={activeGroup || undefined} />
+            </div>
+          </div>
+          <div className="chat-view-messages">
+            <CometChatMessageList group={activeGroup || undefined} />
+          </div>
+          <div className="chat-view-composer">
+            <CometChatMessageComposer group={activeGroup || undefined} />
+          </div>
+        </div>
+      ) : (
+        <div className="conversations-view">
+          <div className="tab-header">
+            <span className="tab-header-title">Grupos</span>
+            {/* ARCALINK: Apenas médicos criam grupos */}
+            {isMedico && (
+              <button
+                className="tab-header-action"
+                title="Novo Grupo Médico"
+                onClick={() => setShowCriarGrupo(true)}
+              >
+                +
+              </button>
+            )}
+          </div>
+          <div className="cometchat-list-wrap">
+            <CometChatGroups onItemClick={handleGroupItemClick} />
+          </div>
+        </div>
+      )}
     </div>
   );
 
+  /* ── RENDER: Perfil ── */
   const renderProfile = () => (
     <div className="tab-content profile-tab">
-      {/* Profile header */}
       <div className="profile-header-bg">
-        <div
-          className="profile-avatar-big"
-          style={{ background: isMedico ? '#2D9E6B' : '#1A4A7A' }}
-        >
+        <div className="profile-avatar-big" style={{ background: isMedico ? '#2D9E6B' : '#1A4A7A' }}>
           {initial}
         </div>
         <p className="profile-name">{userName}</p>
@@ -144,8 +475,6 @@ function ChatApp({ onLogout }) {
           {roleLabel}
         </span>
       </div>
-
-      {/* Info rows */}
       <div className="profile-card">
         <div className="profile-row">
           <span className="profile-row-label">UID</span>
@@ -173,18 +502,15 @@ function ChatApp({ onLogout }) {
           <span className="profile-row-val">v1.0.0-MVP</span>
         </div>
       </div>
-
       <button className="edit-profile-btn">Editar Perfil</button>
       <button className="logout-btn-mobile" onClick={handleLogout}>Sair da conta</button>
-      <p className="profile-legal">
-        ArcaLink · arcalink.com.br · Conforme LGPD
-      </p>
+      <p className="profile-legal">ArcaLink · arcalink.com.br · Conforme LGPD</p>
     </div>
   );
 
   return (
     <div className="mobile-chat-app">
-      {/* Top navigation bar */}
+      {/* Top bar */}
       <div className="mobile-topbar">
         <div className="topbar-logo">ArcaLink</div>
         <div
@@ -196,27 +522,41 @@ function ChatApp({ onLogout }) {
         </div>
       </div>
 
-      {/* Content area */}
+      {/* Content */}
       <div className="mobile-content">
         {activeTab === 'chats'   && renderChats()}
         {activeTab === 'groups'  && renderGroups()}
         {activeTab === 'profile' && renderProfile()}
       </div>
 
-      {/* Bottom Tab Bar — hidden when in chat view */}
+      {/* Bottom tab bar */}
       {!inChatView && (
         <div className="mobile-tab-bar">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               className={`tab-item${activeTab === tab.id ? ' active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { setActiveTab(tab.id); setInChatView(false); }}
             >
               <span className="tab-icon">{tab.icon}</span>
               <span className="tab-label">{tab.label}</span>
             </button>
           ))}
         </div>
+      )}
+
+      {/* ── Modals ── */}
+      {showNewChat && (
+        <NewChatModal
+          onClose={() => setShowNewChat(false)}
+          onUserSelected={handleUserSelected}
+        />
+      )}
+      {showCriarGrupo && (
+        <CriarGrupoModal
+          onClose={() => setShowCriarGrupo(false)}
+          onGroupCreated={handleGroupCreated}
+        />
       )}
     </div>
   );
