@@ -8,23 +8,31 @@ import {
 } from '@cometchat/chat-uikit-react';
 import './ChatApp.css';
 
+// ARCALINK: Role labels in pt-BR
+const ROLE_LABELS = { medico: 'Médico', paciente: 'Paciente' };
+
+// ARCALINK: Bottom Tab definitions
+const TABS = [
+  { id: 'chats',    label: 'Conversas', icon: '💬' },
+  { id: 'groups',   label: 'Grupos',    icon: '👥' },
+  { id: 'profile',  label: 'Perfil',    icon: '👤' },
+];
+
 function ChatApp({ onLogout }) {
   const [loggedUser, setLoggedUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('chats');
   const [activeUser, setActiveUser] = useState(null);
   const [activeGroup, setActiveGroup] = useState(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showChat, setShowChat] = useState(false);
+  const [inChatView, setInChatView] = useState(false);
 
   useEffect(() => {
     CometChatUIKit.getLoggedinUser().then((u) => { if (u) setLoggedUser(u); });
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const roleLabel = loggedUser?.getRole?.() === 'medico' ? 'Médico' : 'Paciente';
   const isMedico = loggedUser?.getRole?.() === 'medico';
+  const roleLabel = ROLE_LABELS[loggedUser?.getRole?.()] ?? loggedUser?.getRole?.() ?? '';
+  const userName = loggedUser?.getName?.() ?? '';
+  const initial = userName.charAt(0).toUpperCase() || 'U';
 
   const handleConversationClick = (conversation) => {
     const type = conversation.getConversationType();
@@ -35,11 +43,11 @@ function ChatApp({ onLogout }) {
       setActiveGroup(conversation.getConversationWith());
       setActiveUser(null);
     }
-    if (isMobile) setShowChat(true);
+    setInChatView(true);
   };
 
-  const handleBackToList = () => {
-    setShowChat(false);
+  const handleBack = () => {
+    setInChatView(false);
     setActiveUser(null);
     setActiveGroup(null);
   };
@@ -52,125 +60,164 @@ function ChatApp({ onLogout }) {
 
   const hasActiveChat = activeUser || activeGroup;
 
-  return (
-    <div className="chat-app">
-      {/* Top Header */}
-      <div className="app-header">
-        <div className="app-logo">
-          <span className="logo-text">ArcaLink</span>
-          <span className="logo-tag">Comunicação médica segura</span>
-        </div>
-        <div className="header-actions">
-          <div className="user-info" onClick={() => setShowProfile(!showProfile)}>
-            <div
-              className="user-avatar"
-              style={{ backgroundColor: isMedico ? '#2D9E6B' : '#1A4A7A' }}
-            >
-              {loggedUser?.getName?.()?.charAt(0) ?? 'U'}
-            </div>
-            <div className="user-details">
-              <span className="user-name">{loggedUser?.getName?.() ?? 'Usuário'}</span>
-              <span
-                className="user-role-badge"
-                style={{ color: isMedico ? '#B2F0D5' : '#B2C8F0' }}
-              >
-                {roleLabel}
-              </span>
+  /* ── RENDER helpers ── */
+  const renderChats = () => (
+    <div className="tab-content">
+      {/* In-chat view (messages) */}
+      {inChatView && hasActiveChat ? (
+        <div className="chat-view">
+          {/* Header com voltar */}
+          <div className="chat-view-header">
+            <button className="back-arrow" onClick={handleBack}>←</button>
+            <div className="chat-view-header-content">
+              <CometChatMessageHeader
+                user={activeUser || undefined}
+                group={activeGroup || undefined}
+              />
             </div>
           </div>
-          <button className="logout-btn" onClick={handleLogout} title="Sair">
-            ⏻
-          </button>
+          <div className="chat-view-messages">
+            <CometChatMessageList
+              user={activeUser || undefined}
+              group={activeGroup || undefined}
+            />
+          </div>
+          <div className="chat-view-composer">
+            <CometChatMessageComposer
+              user={activeUser || undefined}
+              group={activeGroup || undefined}
+            />
+          </div>
         </div>
-      </div>
-
-      {/* Profile Dropdown Overlay */}
-      {showProfile && (
-        <div className="profile-overlay" onClick={() => setShowProfile(false)}>
-          <div className="profile-card" onClick={(e) => e.stopPropagation()}>
-            <div
-              className="profile-big-avatar"
-              style={{ backgroundColor: isMedico ? '#2D9E6B' : '#1A4A7A' }}
-            >
-              {loggedUser?.getName?.()?.charAt(0) ?? 'U'}
-            </div>
-            <p className="profile-name">{loggedUser?.getName?.()}</p>
-            <span
-              className="profile-role-chip"
-              style={{
-                backgroundColor: isMedico ? '#E8F7F1' : '#E8EFF7',
-                color: isMedico ? '#2D9E6B' : '#1A4A7A',
-              }}
-            >
-              {roleLabel}
-            </span>
-            <p className="profile-id">ID: {loggedUser?.getUid?.()}</p>
-            {isMedico && <p className="profile-crm">CRM: A preencher</p>}
-            <button className="profile-logout-btn" onClick={handleLogout}>
-              Sair da conta
-            </button>
+      ) : (
+        /* Conversations list */
+        <div className="conversations-view">
+          <div className="tab-header">
+            <span className="tab-header-title">Conversas</span>
+          </div>
+          <div className="cometchat-list-wrap">
+            <CometChatConversations onItemClick={handleConversationClick} />
           </div>
         </div>
       )}
+    </div>
+  );
 
-      {/* Main Layout */}
-      <div className="chat-layout">
-        {/* Left: Conversations list */}
+  const renderGroups = () => (
+    <div className="tab-content">
+      <div className="tab-header">
+        <span className="tab-header-title">Grupos</span>
+        {isMedico && (
+          <button className="tab-header-action" title="Novo Grupo Médico">+</button>
+        )}
+      </div>
+      <div className="groups-placeholder">
+        <div className="placeholder-icon">👥</div>
+        <p className="placeholder-title">Seus grupos médicos</p>
+        <p className="placeholder-sub">
+          {isMedico
+            ? 'Crie grupos privados para cada consulta tocando em "+"'
+            : 'Você participará dos grupos em que for adicionado pelo médico'}
+        </p>
+      </div>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className="tab-content profile-tab">
+      {/* Profile header */}
+      <div className="profile-header-bg">
         <div
-          className={`conversations-panel${isMobile && showChat ? ' hidden' : ''}`}
+          className="profile-avatar-big"
+          style={{ background: isMedico ? '#2D9E6B' : '#1A4A7A' }}
         >
-          <CometChatConversations
-            onItemClick={handleConversationClick}
-          />
+          {initial}
         </div>
-
-        {/* Right: Message area */}
-        <div
-          className={`messages-panel${isMobile && !showChat ? ' hidden' : ''}`}
+        <p className="profile-name">{userName}</p>
+        <span
+          className="profile-role-chip"
+          style={{
+            background: isMedico ? 'rgba(45,158,107,0.15)' : 'rgba(26,74,122,0.15)',
+            color: isMedico ? '#2D9E6B' : '#1A4A7A',
+          }}
         >
-          {hasActiveChat ? (
-            <div className="messages-wrapper">
-              <div className="message-header-wrapper">
-                {isMobile && (
-                  <button className="back-btn" onClick={handleBackToList}>
-                    ← Voltar
-                  </button>
-                )}
-                <CometChatMessageHeader
-                  user={activeUser || undefined}
-                  group={activeGroup || undefined}
-                />
-              </div>
-              <div className="message-list-wrapper">
-                <CometChatMessageList
-                  user={activeUser || undefined}
-                  group={activeGroup || undefined}
-                />
-              </div>
-              <div className="message-composer-wrapper">
-                <CometChatMessageComposer
-                  user={activeUser || undefined}
-                  group={activeGroup || undefined}
-                />
-              </div>
+          {roleLabel}
+        </span>
+      </div>
+
+      {/* Info rows */}
+      <div className="profile-card">
+        <div className="profile-row">
+          <span className="profile-row-label">UID</span>
+          <span className="profile-row-val">{loggedUser?.getUid?.()}</span>
+        </div>
+        <div className="profile-divider" />
+        <div className="profile-row">
+          <span className="profile-row-label">Tipo de Conta</span>
+          <span className="profile-row-val" style={{ color: isMedico ? '#2D9E6B' : '#1A4A7A' }}>
+            {roleLabel}
+          </span>
+        </div>
+        {isMedico && (
+          <>
+            <div className="profile-divider" />
+            <div className="profile-row">
+              <span className="profile-row-label">CRM</span>
+              <span className="profile-row-val">A preencher</span>
             </div>
-          ) : (
-            <div className="empty-chat">
-              <div className="empty-icon">💬</div>
-              <h3 className="empty-title">Selecione uma conversa</h3>
-              <p className="empty-subtitle">
-                Escolha uma conversa na lista à esquerda para começar a
-                trocar mensagens.
-              </p>
-              {isMedico && (
-                <p className="empty-hint">
-                  Dica: Acesse Grupos para criar uma nova consulta médica.
-                </p>
-              )}
-            </div>
-          )}
+          </>
+        )}
+        <div className="profile-divider" />
+        <div className="profile-row">
+          <span className="profile-row-label">Versão</span>
+          <span className="profile-row-val">v1.0.0-MVP</span>
         </div>
       </div>
+
+      <button className="edit-profile-btn">Editar Perfil</button>
+      <button className="logout-btn-mobile" onClick={handleLogout}>Sair da conta</button>
+      <p className="profile-legal">
+        ArcaLink · arcalink.com.br · Conforme LGPD
+      </p>
+    </div>
+  );
+
+  return (
+    <div className="mobile-chat-app">
+      {/* Top navigation bar */}
+      <div className="mobile-topbar">
+        <div className="topbar-logo">ArcaLink</div>
+        <div
+          className="topbar-avatar"
+          style={{ background: isMedico ? '#2D9E6B' : '#1A4A7A' }}
+          onClick={() => setActiveTab('profile')}
+        >
+          {initial}
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className="mobile-content">
+        {activeTab === 'chats'   && renderChats()}
+        {activeTab === 'groups'  && renderGroups()}
+        {activeTab === 'profile' && renderProfile()}
+      </div>
+
+      {/* Bottom Tab Bar — hidden when in chat view */}
+      {!inChatView && (
+        <div className="mobile-tab-bar">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`tab-item${activeTab === tab.id ? ' active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="tab-icon">{tab.icon}</span>
+              <span className="tab-label">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

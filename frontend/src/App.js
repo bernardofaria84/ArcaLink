@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CometChatUIKit, UIKitSettingsBuilder } from '@cometchat/chat-uikit-react';
 import LoginPage from './components/LoginPage';
 import ChatApp from './components/ChatApp';
+import PhoneMockup from './components/PhoneMockup';
 import './App.css';
 
 const APP_ID = process.env.REACT_APP_COMETCHAT_APP_ID;
@@ -25,65 +26,57 @@ function App() {
     CometChatUIKit.init(UIKitSettings)
       .then(() => {
         setIsInitialized(true);
-        // Verificar se já tem usuário logado
         return CometChatUIKit.getLoggedinUser();
       })
       .then((user) => {
-        if (user) {
-          setIsLoggedIn(true);
-        }
+        if (user) setIsLoggedIn(true);
         setLoading(false);
       })
       .catch((err) => {
         console.error('ArcaLink: Erro ao inicializar CometChat:', err);
-        setInitError('Erro ao conectar com o servidor. Verifique as credenciais.');
+        setInitError('Erro ao conectar com o servidor.');
         setLoading(false);
       });
   }, []);
 
-  const handleLoginSuccess = () => {
-    // Refresh logged user after login
-    CometChatUIKit.getLoggedinUser().then((u) => {
-      if (u) console.log('ArcaLink: Logged in as', u.getName(), 'role:', u.getRole());
-    });
-    setIsLoggedIn(true);
-  };
+  const handleLoginSuccess = () => setIsLoggedIn(true);
 
   const handleLogout = async () => {
     try {
       await CometChatUIKit.logout();
-      setIsLoggedIn(false);
-    } catch (err) {
-      console.error('Erro ao fazer logout:', err);
-    }
+    } catch (_) {}
+    setIsLoggedIn(false);
   };
 
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-logo">ArcaLink</div>
-        <div className="loading-spinner"></div>
-        <p className="loading-text">Comunicação médica segura</p>
-      </div>
-    );
-  }
-
-  if (initError) {
-    return (
-      <div className="error-screen">
-        <div className="error-logo">ArcaLink</div>
-        <div className="error-box">
-          <p>{initError}</p>
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="splash-screen">
+          <div className="splash-logo">ArcaLink</div>
+          <div className="splash-spinner" />
+          <p className="splash-tagline">Comunicação médica segura</p>
         </div>
-      </div>
-    );
-  }
+      );
+    }
+    if (initError) {
+      return (
+        <div className="splash-screen">
+          <div className="splash-logo">ArcaLink</div>
+          <div className="splash-error">{initError}</div>
+        </div>
+      );
+    }
+    if (!isLoggedIn) {
+      return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    }
+    return <ChatApp onLogout={handleLogout} />;
+  };
 
-  if (!isLoggedIn) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  return <ChatApp onLogout={handleLogout} />;
+  return (
+    <PhoneMockup>
+      {renderContent()}
+    </PhoneMockup>
+  );
 }
 
 export default App;
