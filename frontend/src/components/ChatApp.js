@@ -295,6 +295,104 @@ function CriarGrupoModal({ onClose, onGroupCreated }) {
 }
 
 /* ─────────────────────────────────────────────
+   SUB-COMPONENT: Modal Confirmação de Logout
+   Substitui window.confirm() — bloqueado em iframes
+───────────────────────────────────────────── */
+function LogoutConfirmModal({ onCancel, onConfirm }) {
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-sheet confirm-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <div className="confirm-icon">👋</div>
+        <h3 className="confirm-title">Sair da conta?</h3>
+        <p className="confirm-msg">Tem certeza que deseja sair do ArcaLink?</p>
+        <div className="confirm-actions">
+          <button className="confirm-btn cancel" onClick={onCancel}>Cancelar</button>
+          <button className="confirm-btn danger" onClick={onConfirm}>Sair</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   SUB-COMPONENT: Modal Editar Perfil
+   Permite alterar o nome de exibição do usuário
+───────────────────────────────────────────── */
+function EditProfileModal({ currentUser, onClose, onSaved }) {
+  const [name, setName] = useState(currentUser?.getName?.() ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError('O nome não pode estar vazio.'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      // ARCALINK: Atualizar nome do usuário na CometChat
+      const updatedUser = new CometChat.User(currentUser.getUid());
+      updatedUser.setName(name.trim());
+      const saved = await CometChat.updateCurrentUserDetails(updatedUser);
+      setSuccess(true);
+      setTimeout(() => { onSaved(saved); onClose(); }, 900);
+    } catch (e) {
+      console.error('ArcaLink: erro ao atualizar perfil', e);
+      setError('Erro ao salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <div className="modal-header">
+          <span className="modal-title">Editar Perfil</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="edit-profile-body">
+          {/* Avatar preview */}
+          <div className="edit-avatar-preview">
+            {name.charAt(0).toUpperCase() || '?'}
+          </div>
+
+          <div className="modal-field">
+            <label className="modal-field-label">Nome de exibição</label>
+            <input
+              className="modal-field-input"
+              type="text"
+              value={name}
+              onChange={(e) => { setName(e.target.value); setError(''); setSuccess(false); }}
+              placeholder="Seu nome completo"
+              autoFocus
+            />
+          </div>
+
+          {error && <p className="modal-error">{error}</p>}
+
+          {success && (
+            <p className="modal-success">✓ Perfil atualizado com sucesso!</p>
+          )}
+
+          <button
+            className={`modal-create-btn${saving ? ' loading' : ''}`}
+            onClick={handleSave}
+            disabled={saving || success}
+          >
+            {saving   ? <span className="btn-spin-dark" /> :
+             success  ? '✓ Salvo!' :
+             'Salvar Alterações'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    MAIN COMPONENT: ChatApp
 ───────────────────────────────────────────── */
 function ChatApp({ onLogout }) {
@@ -307,6 +405,8 @@ function ChatApp({ onLogout }) {
   // Modals
   const [showNewChat, setShowNewChat] = useState(false);
   const [showCriarGrupo, setShowCriarGrupo] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   useEffect(() => {
     CometChatUIKit.getLoggedinUser().then((u) => { if (u) setLoggedUser(u); });
@@ -344,9 +444,13 @@ function ChatApp({ onLogout }) {
   };
 
   const handleLogout = () => {
-    if (window.confirm('Tem certeza que deseja sair do ArcaLink?')) {
-      onLogout();
-    }
+    // ARCALINK: usar modal customizado em vez de window.confirm() (bloqueado em iframes)
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirmed = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
   };
 
   // ── Modal handlers ──
@@ -502,8 +606,12 @@ function ChatApp({ onLogout }) {
           <span className="profile-row-val">v1.0.0-MVP</span>
         </div>
       </div>
-      <button className="edit-profile-btn">Editar Perfil</button>
-      <button className="logout-btn-mobile" onClick={handleLogout}>Sair da conta</button>
+      <button className="edit-profile-btn" onClick={() => setShowEditProfile(true)}>
+        Editar Perfil
+      </button>
+      <button className="logout-btn-mobile" onClick={handleLogout}>
+        Sair da conta
+      </button>
       <p className="profile-legal">ArcaLink · arcalink.com.br · Conforme LGPD</p>
     </div>
   );
@@ -556,6 +664,19 @@ function ChatApp({ onLogout }) {
         <CriarGrupoModal
           onClose={() => setShowCriarGrupo(false)}
           onGroupCreated={handleGroupCreated}
+        />
+      )}
+      {showLogoutConfirm && (
+        <LogoutConfirmModal
+          onCancel={() => setShowLogoutConfirm(false)}
+          onConfirm={handleLogoutConfirmed}
+        />
+      )}
+      {showEditProfile && (
+        <EditProfileModal
+          currentUser={loggedUser}
+          onClose={() => setShowEditProfile(false)}
+          onSaved={(updatedUser) => setLoggedUser(updatedUser)}
         />
       )}
     </div>

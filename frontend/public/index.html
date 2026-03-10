@@ -12,6 +12,24 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <!-- ARCALINK: Fix "Invalid language tag: en-US@posix" em ambientes Linux/Posix -->
+    <script>
+      (function() {
+        try {
+          var _DTF = Intl.DateTimeFormat;
+          function patchLocale(l) {
+            return typeof l === 'string' ? l.replace(/@[a-zA-Z]+$/, '') : l;
+          }
+          function PatchedDTF(locale, opts) {
+            var safe = Array.isArray(locale) ? locale.map(patchLocale) : patchLocale(locale);
+            return new _DTF(safe, opts);
+          }
+          PatchedDTF.prototype = _DTF.prototype;
+          PatchedDTF.supportedLocalesOf = _DTF.supportedLocalesOf;
+          Intl.DateTimeFormat = PatchedDTF;
+        } catch(e) {}
+      })();
+    </script>
     <title>ArcaLink — Comunicação Médica Segura</title>
   </head>
   <body>

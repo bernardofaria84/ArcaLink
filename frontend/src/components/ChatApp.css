@@ -698,3 +698,100 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
+
+/* =============================================
+   ARCALINK — Logout Confirm Modal
+   ============================================= */
+.confirm-sheet {
+  padding-bottom: 24px;
+  text-align: center;
+}
+
+.confirm-icon {
+  font-size: 40px;
+  margin: 16px 0 10px;
+}
+
+.confirm-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1A1A2E;
+  margin-bottom: 8px;
+}
+
+.confirm-msg {
+  font-size: 13px;
+  color: #4A5568;
+  padding: 0 24px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.confirm-btn {
+  flex: 1;
+  border: none;
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.confirm-btn.cancel {
+  background: #F0F4F8;
+  color: #4A5568;
+}
+
+.confirm-btn.cancel:hover { background: #E2E8F0; }
+
+.confirm-btn.danger {
+  background: #C0392B;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(192,57,43,0.3);
+}
+
+.confirm-btn.danger:hover { background: #a93226; }
+
+/* =============================================
+   ARCALINK — Edit Profile Modal
+   ============================================= */
+.edit-profile-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 16px 4px;
+  gap: 12px;
+}
+
+.edit-avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #0A6E6E;
+  color: #FFFFFF;
+  font-size: 26px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  margin-bottom: 4px;
+  transition: background 0.2s;
+}
+
+.modal-success {
+  font-size: 12px;
+  color: #2D9E6B;
+  text-align: center;
+  background: #ECFDF5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 600;
+}
