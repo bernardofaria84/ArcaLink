@@ -1,3 +1,193 @@
+/* =============================================
+   ARCALINK — CometChat Theme Override
+   Substitui as cores padrão roxo/violeta do CometChat
+   pelas cores da marca ArcaLink (#0A6E6E teal)
+   ============================================= */
+
+:root {
+  /* Cor primária: roxo CometChat → verde-azulado ArcaLink */
+  --cometchat-primary-color: #0A6E6E;
+
+  /* Extended primary — escala de tons do teal ArcaLink */
+  --cometchat-extended-primary-color-50:  #F0F9F9;
+  --cometchat-extended-primary-color-100: #D4EEEE;
+  --cometchat-extended-primary-color-200: #B2DCDC;
+  --cometchat-extended-primary-color-300: #8FCACA;
+  --cometchat-extended-primary-color-400: #6DB8B8;
+  --cometchat-extended-primary-color-500: #0A6E6E; /* Avatar bg */
+  --cometchat-extended-primary-color-600: #096262;
+  --cometchat-extended-primary-color-700: #085656;
+  --cometchat-extended-primary-color-800: #064A4A;
+  --cometchat-extended-primary-color-900: #053E3E;
+
+  /* Fonte: Roboto CometChat → Inter ArcaLink */
+  --cometchat-font-family: 'Inter', sans-serif;
+
+  /* Cor "lida" (seen): verde suave */
+  --cometchat-message-seen-color: #2D9E6B;
+}
+
+/* ── Oculta TODOS os cabeçalhos internos do CometChat (temos os nossos próprios) ── */
+.cometchat-conversations .cometchat-list__header,
+.cometchat-conversations .cometchat-conversations-header,
+.cometchat-groups .cometchat-list__header,
+.cometchat-groups .cometchat-conversations-header {
+  display: none !important;
+  min-height: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ── Avatar: tamanho fixo, circular, fundo teal ArcaLink ── */
+.cometchat-avatar {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  background: #0A6E6E !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Texto inicial do avatar: branco, tamanho adequado ── */
+.cometchat-avatar__text {
+  color: #FFFFFF !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-family: 'Inter', sans-serif !important;
+  width: auto !important;
+  height: auto !important;
+  line-height: 1 !important;
+}
+
+/* ── Imagem do avatar (quando existe foto) ── */
+.cometchat-avatar__image {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  color: #FFFFFF !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+/* ── Leading view: remove padding excessivo que cortava o avatar ── */
+.cometchat-list-item__leading-view {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Badge de mensagens não lidas: cor ArcaLink ── */
+.cometchat-conversations__trailing-view-badge-count {
+  background: #0A6E6E !important;
+}
+
+/* ── Typing indicator e destaques de texto ── */
+.cometchat-conversations__subtitle-typing {
+  color: #0A6E6E !important;
+}
+
+/* ── FAB button (criar conversa/grupo dentro do CometChat, se houver) ── */
+.cometchat-button__primary,
+.cometchat-fab-button {
+  background: #0A6E6E !important;
+}
+
+/* ── Barra de pesquisa: foco em teal ── */
+.cometchat-search-bar__input:focus {
+  border-color: #0A6E6E !important;
+  box-shadow: 0 0 0 2px rgba(10,110,110,0.12) !important;
+}
+
+/* ── Item ativo/selecionado na lista ── */
+.cometchat-conversations__list-item-active .cometchat-list-item {
+  background: #E6F3F3 !important;
+}
+
+/* ── Hover na lista ── */
+.cometchat-list-item:hover {
+  background: #F0F9F9 !important;
+}
+
+/* ── Separador sutil entre itens da lista ── */
+.cometchat-conversations .cometchat-list-item,
+.cometchat-groups .cometchat-list-item {
+  border-bottom: 1px solid #F0F4F8;
+}
+
+/* ── Título do item da lista: peso e tamanho adequados ── */
+.cometchat-list-item__body-title {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #1A1A2E !important;
+}
+
+/* ── Subtítulo (última mensagem): tom cinza suave ── */
+.cometchat-conversations__subtitle-text,
+.cometchat-conversations__subtitle-text-sender {
+  font-size: 12px !important;
+  color: #718096 !important;
+}
+
+/* ── Data/hora da última mensagem ── */
+.cometchat-conversations .cometchat-date {
+  font-size: 11px !important;
+  color: #A0AEC0 !important;
+}
+
+/* ── Mention highlight: cor ArcaLink ── */
+.cometchat-conversations__subtitle-text .cometchat-mentions > span {
+  color: #0A6E6E !important;
+}
+
+/* ── Ícones de status de mensagem (enviada/entregue/lida) ── */
+.cometchat-conversations__subtitle-receipts {
+  background: #A0AEC0 !important;
+}
+.cometchat-conversations__subtitle-receipts-read {
+  background: #2D9E6B !important;
+}
+
+/* ── MessageHeader (cabeçalho dentro do chat): cores ArcaLink ── */
+.cometchat-message-header {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+/* ── MessageComposer: borda e foco em teal ── */
+.cometchat-message-composer {
+  background: #FFFFFF !important;
+  border-top: 1px solid #E2E8F0 !important;
+}
+
+.cometchat-message-composer__send-button {
+  background: #0A6E6E !important;
+}
+
+/* ── Botões primários do CometChat ── */
+.cometchat-primary-button,
+[class*="cometchat-button__primary"] {
+  background: #0A6E6E !important;
+}
+
+/* ── Links e textos de destaque ── */
+.cometchat-text-color-highlight,
+[class*="cometchat-link"] {
+  color: #0A6E6E !important;
+}
+
 /* Splash screen inside phone */
 .splash-screen {
   display: flex;
