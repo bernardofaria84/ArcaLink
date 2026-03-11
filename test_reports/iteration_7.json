@@ -1,0 +1,100 @@
+{
+  "summary": "Iteration 7 — Auto-scroll final CSS fix validation. The critical CSS fix (adding `height: 100% !important` to `.chat-view-messages > .cometchat`) WORKS: outer wrapper now 504px (was 1451px in iteration 6). Latest messages ARE visible at the bottom of the chat view for both group and individual chats. New messages after sending also stay at bottom. Back button and tab switching pass regression tests.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "CometChat Message List — scroll history",
+        "issue": "MEDIUM: User CANNOT scroll up to see older messages. Mouse wheel scroll returns scrollTop=0 on all elements. firstTop=-714px (content above viewport but not scrollable). This is because `.cometchat-message-list` has `overflow: hidden !important` which creates CSS clipping (not native scroll). The 1451px content is clipped to a 504px viewport showing the BOTTOM portion, but there is no scrollable element to navigate up. Note: on real mobile devices, CometChat's touch handlers may still work — this was only tested with desktop mouse wheel.",
+        "selector": ".cometchat-message-list__body",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "CometChat Message List — scrollHeight expected vs actual",
+        "issue": "OBSERVATION: `.cometchat-message-list__body` reports scrollHeight=504 (same as clientHeight) despite having an inner `.cometchat` element that is 1451px. The expected behavior (from test spec) was scrollHeight=1451 > clientHeight=504. The actual mechanism showing latest messages at bottom is CSS clipping (not native DOM scroll). All scrollTop values = 0. The visual result IS correct (latest messages visible), but the underlying mechanism differs from spec.",
+        "selector": ".cometchat-message-list__body",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "tests_passed": {
+    "1_outer_cometchat_height": "✅ PASS — `.chat-view-messages > .cometchat` offsetHeight=504px (was 1451px in iteration 6). CSS fix `height: 100% !important` is working correctly.",
+    "2_last_message_visible_group": "✅ PASS — Pre-Natal group (10 messages): last message (🏈 03:33 AM) is visible at getBoundingClientRect().bottom=775px (well within viewport height=1080).",
+    "3_last_message_visible_individual": "✅ PASS — Maria Silva individual chat (6 messages): last message (status.txt file at 04:59 AM) visible at bottom=775px.",
+    "4_new_message_after_send": "✅ PASS — Sent 'Teste auto-scroll iteração 7' message. Count went from 10 to 11. New message visible at bottom=775px. Scroll stays at bottom.",
+    "5_back_button_groups": "✅ PASS — Back button from group chat returns to Grupos list.",
+    "6_back_button_individual": "✅ PASS — Back button from individual chat returns to Conversas list.",
+    "7_tab_switching": "✅ PASS — All 3 tabs (Conversas, Grupos, Perfil) switch correctly.",
+    "8_login": "✅ PASS — Login as dr.joao@clinica.com works (MOCKED)."
+  },
+
+  "tests_failed": {
+    "1_scrollHeight_gt_clientHeight": "⚠️ PARTIAL — `.cometchat-message-list__body` scrollHeight=504 == clientHeight=504 (NOT the expected 1451 > 504). However the visual result is correct (latest messages visible). Mechanism is CSS clipping not native scroll.",
+    "2_scroll_up_history": "⚠️ OBSERVATION — Mouse wheel scroll up returns scrollTop=0 on all elements. firstTop=-714px shows content is above viewport but inaccessible via desktop scroll. Mobile touch behavior not testable in browser automation."
+  },
+
+  "dom_dimensions_after_fix": {
+    "chat_view_messages_container": "504px",
+    "cometchat_outer_wrapper": "504px (was 1451px - FIX WORKS)",
+    "cometchat_message_list": "504px",
+    "cometchat_message_list_body_scrollH": "504px",
+    "cometchat_message_list_body_clientH": "504px",
+    "inner_cometchat_inside_body": "1451px",
+    "cometchat_list": "1451px (overflow: hidden)",
+    "cometchat_list_body": "1451px (overflow: hidden auto)",
+    "last_msg_getBoundingClientRect_bottom": "775px (visible in 1080px viewport)",
+    "total_group_messages": "10 (11 after test send)"
+  },
+
+  "mechanism_analysis": {
+    "how_latest_messages_are_visible": "CSS overflow:hidden on `.cometchat-message-list` (504px) clips the 1451px content. The CometChat component internally positions messages starting from the bottom, so the visible 504px window shows the NEWEST messages. scrollToBottomOnNewMessages={true} prop ensures new messages also appear at bottom.",
+    "why_scrollH_equals_clientH": "Parent `.cometchat-message-list` has `overflow: hidden !important` which clips the scrollable area. The `.cometchat-message-list__body` (flex:1, min-height:0) also gets `overflow: hidden auto` applied (likely from CometChat's own CSS + our override). The 1451px inner `.cometchat` has overflow:visible but the parent clipping makes scrollHeight report as 504px.",
+    "scroll_up_limitation": "Since no element has scrollH > clientH, there is no native DOM scroll available. Users cannot access chat history via mouse wheel. This may work on mobile with touch events if CometChat handles touch scroll internally on `.cometchat-list__body`."
+  },
+
+  "test_report_links": ["/app/test_reports/iteration_7.json"],
+
+  "action_items": [
+    "INVESTIGATE (MEDIUM): Enable scroll-up for chat history. The current CSS approach (overflow:hidden on .cometchat-message-list) clips content as a viewport but blocks native scroll. Consider using `overflow: hidden` only as a layout constraint and allowing .cometchat-message-list__body to truly scroll (scrollHeight > clientHeight). May need to change `.cometchat-message-list { overflow: hidden }` to allow the body's overflow-y to actually create a scrollable region.",
+    "INVESTIGATE: Check if `.cometchat-list__body` (inner CometChat scroll container, currently scrollH=clientH=1524) can be made scrollable. CometChat may rely on this element for its native scroll behavior.",
+    "VERIFY ON MOBILE: Test on a real mobile device (or use touch simulation in Playwright) to check if CometChat's internal touch handlers allow scroll-up for history — may already work on mobile despite desktop mouse wheel failure.",
+    "NOTE: The `scrollHeight > clientHeight` requirement from the test spec is NOT met technically, but the VISUAL requirement (latest messages visible) IS met. The two are not equivalent when CSS clipping is the mechanism."
+  ],
+
+  "critical_code_review_comments": [
+    "App.css fix line 349: `.cometchat-message-list-loaded > .cometchat-message-list__body > .cometchat` — verify that CometChat actually applies the class `cometchat-message-list-loaded`; if not, the `height: auto` override for the inner .cometchat won't apply",
+    "App.css line 337: `.cometchat-message-list { overflow: hidden !important }` — this creates CSS clipping (visual window) which shows bottom content correctly but blocks native scroll. Consider whether this is acceptable or if a different approach is needed for scroll history access",
+    "ChatApp.js useEffect scrollToBottom: targets `.cometchat-message-list__body` but that element has scrollH==clientH (no native scroll), so JS scrollTop assignment has no effect. The visual result comes from CSS clipping, not JS scroll. The JS code is effectively a no-op."
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "85% (all visual requirements PASS, scroll-up history is a known limitation)"
+  },
+
+  "mocked_apis": "Login is MOCKED — email→UID mapping in LoginPage.js MVP_USERS.",
+
+  "seed_data_creation": "Sent test message 'Teste auto-scroll iteração 7' in Pre-Natal group during testing.",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "ArcaLink iteration 7 — Auto-scroll fix CONFIRMED WORKING. `.chat-view-messages > .cometchat` is now 504px (CSS fix applied). Latest messages ARE visible at bottom for both group (10 msgs) and individual (6 msgs) chats. New messages after sending remain at bottom. The CSS mechanism is overflow:hidden clipping (not native DOM scroll). Scroll-up history is NOT accessible via mouse wheel (scrollTop=0 everywhere). Mobile touch behavior unknown. Login: dr.joao@clinica.com/senha123 (MOCKED). URL: https://medchat-secure.preview.emergentagent.com",
+
+  "rca_of_issue": {
+    "original_problem": "Iteration 6: `.chat-view-messages > .cometchat` had height=1451px (fit-content), showing only OLDEST messages (first 504px visible, newest at +1356px below viewport).",
+    "fix_applied": "Added `height: 100% !important; max-height: 100% !important; overflow: hidden !important` to `.chat-view-messages > .cometchat` in App.css. Also added `display: flex; flex-direction: column; overflow: hidden` to `.cometchat-message-list` and `overflow-y: auto; flex: 1; min-height: 0` to `.cometchat-message-list__body`.",
+    "fix_result": "Outer wrapper constrained to 504px. CometChat internally positions messages from bottom, so newest messages now appear in the visible 504px viewport. Last message visible at getBoundingClientRect().bottom=775px.",
+    "residual_issue": "The overflow:hidden mechanism prevents native DOM scroll. Users cannot scroll up to see older messages via desktop mouse wheel. scrollHeight==clientHeight==504px on .cometchat-message-list__body. Mobile touch behavior was not tested."
+  }
+}

@@ -313,18 +313,39 @@ a[class*="cometchat"],
 /* ────────────────────────────────────────────────────────────────
    FIX: CometChat MessageList — forçar scroll correto
    
-   Problema: ao carregar msgs, CometChat aplica height:fit-content
-   no .cometchat interno, fazendo scrollHeight===clientHeight no
-   .cometchat-list__body → sem overflow → sem scroll.
+   Causa raiz: CometChat aplica height:fit-content no .cometchat
+   wrapper externo do CometChatMessageList. Isso faz o conteúdo
+   ter 1451px enquanto o container visível é 504px (overflow:hidden).
+   O usuário vê apenas as primeiras mensagens (topo), não as novas.
    
-   Solução: tornar .cometchat-message-list__body o container
-   scrollável real.
+   Solução: forçar altura 100% em toda a cadeia com !important,
+   e tornar .cometchat-message-list__body o container scrollável.
    ──────────────────────────────────────────────────────────────── */
+
+/* 1. Wrapper externo: constrangido à altura do container visível */
+.chat-view-messages > .cometchat {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* 2. Componente message-list: flex column para distribuir espaço */
+.chat-view-messages .cometchat-message-list {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* 3. Body do message-list: recebe overflow-y: auto — É O SCROLL CONTAINER */
 .chat-view-messages .cometchat-message-list__body {
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  flex: 1 !important;
+  min-height: 0 !important;
 }
-/* Garante que o conteúdo interno possa crescer além do container */
+
+/* 4. Elementos internos: podem crescer livremente (fit-content OK aqui) */
 .chat-view-messages .cometchat-message-list-loaded > .cometchat-message-list__body > .cometchat {
   height: auto !important;
   max-height: none !important;
@@ -333,4 +354,5 @@ a[class*="cometchat"],
   height: auto !important;
   max-height: none !important;
 }
+
 
