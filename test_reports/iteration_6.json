@@ -1,0 +1,80 @@
+{
+  "summary": "Iteration 6 — Critical auto-scroll investigation. CSS override (overflow-y:auto !important on .cometchat-message-list__body) IS applied and confirmed via computed style. However scrollHeight===clientHeight persists because the ROOT CAUSE is different: the outer .cometchat wrapper (direct child of .chat-view-messages) expands to height:fit-content (~1451px for group with 10 messages) while .chat-view-messages has overflow:hidden (504px). The last message is confirmed NOT VISIBLE (relativeTop=1356px, container height=504px). Current CSS fix is INCOMPLETE.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ChatApp — Group Chat (Pre-Natal)",
+        "issue": "CRITICAL: Last/newest message NOT visible when opening chat. Last message is at relativeTop=1356px but container is only 504px tall (overflow:hidden). User sees only the OLDEST messages (first 504px of 1451px content), not the latest.",
+        "selector": ".chat-view-messages > .cometchat",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "tests_passed": {
+    "1_overflow_y_auto": "PASS — .cometchat-message-list__body has overflowY='auto' (CSS override IS applied). Individual chat: overflowY=auto confirmed. Group chat: overflowY=auto confirmed.",
+    "2_login": "PASS — Login with dr.joao@clinica.com works (MOCKED).",
+    "3_navigation": "PASS — Navigation to Conversas and Grupos tabs works."
+  },
+
+  "tests_failed": {
+    "1_scrollHeight_gt_clientHeight": "FAIL — .cometchat-message-list__body: scrollH=1451, clientH=1451 for group (10 messages). Individual chat (5 msgs): scrollH=398, clientH=398. In both cases scrollHeight===clientHeight because the element ITSELF expands to fit-content.",
+    "2_last_message_visible": "FAIL — Group chat: last message ('🏈 emoji' at 03:33 AM) is at relativeTop=1356px, container height=504px. Message is BELOW viewport and user CANNOT see it.",
+    "3_autoscroll_at_bottom": "FAIL — scrollTop=0 on all elements, maxScroll=0 (no overflow), so no scroll happens. First (oldest) ~3 messages are visible, not the latest."
+  },
+
+  "rca_of_issue": {
+    "root_cause": "The outer `.cometchat` element (direct child of `.chat-view-messages`) expands to height:fit-content due to CometChat internal CSS applying `height:fit-content !important`. This cascades: .cometchat → .cometchat-message-list → .cometchat-message-list__body → .cometchat → .cometchat-list → .cometchat-list__body ALL expand to the full content height (1451px for 10 msgs). Meanwhile .chat-view-messages has overflow:hidden at 504px. The visible area shows only the FIRST 504px (oldest messages). The CSS fix only adds overflow-y:auto to .cometchat-message-list__body, but that element is also 1451px tall with no overflow to trigger.",
+    "why_current_fix_fails": "overflow-y:auto on .cometchat-message-list__body has no effect because the element ITSELF is 1451px tall — the content fits perfectly, so there is no overflow. The element would need a FIXED/MAX height smaller than its content to create real overflow.",
+    "key_DOM_findings": {
+      "chat-view-messages": "clientH=504, scrollH=1451, overflow=hidden",
+      "cometchat_wrapper": "height=1450.92px (fit-content, NOT constrained to 504px)",
+      "cometchat-message-list__body": "height=1450.92px, overflow-y=auto (CSS fix IS applied but useless at this size)",
+      "cometchat-list": "height=1450.92px, overflow=hidden (blocks native CometChat scroll too)",
+      "cometchat-list__body": "height=1450.92px, overflow-y=auto, scrollH=clientH=1451"
+    },
+    "fix_needed": "Constrain .chat-view-messages > .cometchat to 100% height with !important to override CometChat's fit-content. AND make the actual scroll container (ideally .cometchat-list__body or .cometchat-message-list__body) have a real fixed height that is smaller than content. Proposed CSS: `.chat-view-messages > .cometchat { height: 100% !important; max-height: 100% !important; overflow: hidden !important; }` AND `.chat-view-messages .cometchat-message-list { height: 100% !important; display: flex; flex-direction: column; }` AND ensure .cometchat-list has `height: 100% !important; overflow: hidden !important;`",
+    "reproduction_steps": [
+      "1. Login as dr.joao@clinica.com",
+      "2. Go to Grupos tab",
+      "3. Open Pre-Natal - Maria Silva group",
+      "4. Run: document.querySelector('.cometchat-message-list__body').scrollHeight → returns 1451",
+      "5. Run: document.querySelector('.cometchat-message-list__body').clientHeight → returns 1451 (equal!)",
+      "6. Run: Array.from(document.querySelectorAll('.cometchat-list__item-wrapper')).pop().getBoundingClientRect().top → returns ~1500 (WAY below viewport)",
+      "7. User sees: first/oldest messages at top, NOT the newest at bottom"
+    ]
+  },
+
+  "test_report_links": ["/app/test_reports/iteration_6.json"],
+
+  "action_items": [
+    "CRITICAL: Add CSS to constrain the outer .cometchat wrapper height: `.chat-view-messages > .cometchat { height: 100% !important; max-height: 100% !important; overflow: hidden !important; }` — this is the key missing fix",
+    "CRITICAL: Also add: `.chat-view-messages .cometchat-message-list { height: 100% !important; }` and `.chat-view-messages .cometchat-list { height: 100% !important; overflow: hidden !important; }` to ensure the constraint cascades all the way down",
+    "IMPORTANT: After adding height constraints, the scrollToBottom JS should target `.cometchat-list__body` (CometChat's native scroll container) OR `.cometchat-message-list__body` — both need to have real overflow after the fix",
+    "VERIFY: After adding the CSS fix, confirm scrollH > clientH on at least one element in the chain, then confirm scrollTop = scrollH - clientH"
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "30% (overflow-y:auto CSS applied, but core scroll behavior still broken)"
+  },
+
+  "mocked_apis": "Login is MOCKED — email→UID mapping in LoginPage.js MVP_USERS, no real backend auth.",
+
+  "seed_data_creation": "No new seed data created.",
+
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "ArcaLink iteration 6 — Auto-scroll STILL BROKEN despite CSS fix. Root cause: .cometchat (direct child of .chat-view-messages) expands to fit-content (~1451px for group). Key test: open Pre-Natal group, run JS: `const last = Array.from(document.querySelectorAll('.cometchat-list__item-wrapper')).pop(); console.log(last.getBoundingClientRect().top, document.querySelector('.chat-view-messages').clientHeight)` → last msg top >> container height. The REAL fix is to add `height: 100% !important` to `.chat-view-messages > .cometchat` and cascade it down through `.cometchat-message-list`, `.cometchat-list`. Key selectors for verification: `.chat-view-messages > .cometchat` (needs height:100%), `.cometchat-message-list__body` (needs overflow-y:auto with constrained height), `.cometchat-list__body` (native CometChat scroll container). Individual chat (5 msgs, 398px) also has scrollH===clientH but since all 5 msgs fit in 398px, it's less critical."
+}

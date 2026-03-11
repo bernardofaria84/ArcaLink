@@ -309,3 +309,28 @@ a[class*="cometchat"],
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ────────────────────────────────────────────────────────────────
+   FIX: CometChat MessageList — forçar scroll correto
+   
+   Problema: ao carregar msgs, CometChat aplica height:fit-content
+   no .cometchat interno, fazendo scrollHeight===clientHeight no
+   .cometchat-list__body → sem overflow → sem scroll.
+   
+   Solução: tornar .cometchat-message-list__body o container
+   scrollável real.
+   ──────────────────────────────────────────────────────────────── */
+.chat-view-messages .cometchat-message-list__body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+/* Garante que o conteúdo interno possa crescer além do container */
+.chat-view-messages .cometchat-message-list-loaded > .cometchat-message-list__body > .cometchat {
+  height: auto !important;
+  max-height: none !important;
+}
+.chat-view-messages .cometchat-message-list-loaded .cometchat-message-list__body .cometchat-list__body {
+  height: auto !important;
+  max-height: none !important;
+}
+

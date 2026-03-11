@@ -595,12 +595,14 @@ function ChatApp({ onLogout }) {
     if (!container) return;
 
     const scrollToBottom = () => {
-      // O elemento scrollável real do CometChat UIKit é `.cometchat-list__body`
+      // Com o override CSS, .cometchat-message-list__body é o container scrollável real.
+      // O CometChat aplica height:fit-content no .cometchat interno, fazendo
+      // .cometchat-list__body ter scrollHeight===clientHeight (sem overflow).
       const scrollable =
-        container.querySelector('.cometchat-list__body') ||
         container.querySelector('.cometchat-message-list__body') ||
+        container.querySelector('.cometchat-list__body') ||
+        container.querySelector('[class*="message-list__body"]') ||
         container.querySelector('[class*="list__body"]') ||
-        container.querySelector('[class*="message-list"]') ||
         container.firstElementChild ||
         container;
       if (scrollable) {
