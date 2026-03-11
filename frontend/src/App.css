@@ -311,48 +311,60 @@ a[class*="cometchat"],
 }
 
 /* ────────────────────────────────────────────────────────────────
-   FIX: CometChat MessageList — forçar scroll correto
+   FIX: CometChat MessageList — hierarquia de altura + scroll real
    
-   Causa raiz: CometChat aplica height:fit-content no .cometchat
-   wrapper externo do CometChatMessageList. Isso faz o conteúdo
-   ter 1451px enquanto o container visível é 504px (overflow:hidden).
-   O usuário vê apenas as primeiras mensagens (topo), não as novas.
+   Problema: CometChat aplica height:fit-content no .cometchat interno
+   quebrando toda a cadeia de altura. Sem altura fixa, scrollHeight===
+   clientHeight em todos os elementos → sem overflow → sem scroll.
    
-   Solução: forçar altura 100% em toda a cadeia com !important,
-   e tornar .cometchat-message-list__body o container scrollável.
+   Solução: forçar height:100% em toda a cadeia com !important até
+   chegar no .cometchat-list__body (scroll container nativo CometChat),
+   que fica com overflow-y:auto e pode rolar com scrollHeight > clientHeight.
    ──────────────────────────────────────────────────────────────── */
 
-/* 1. Wrapper externo: constrangido à altura do container visível */
+/* 1. Wrapper externo do CometChatMessageList */
 .chat-view-messages > .cometchat {
   height: 100% !important;
   max-height: 100% !important;
   overflow: hidden !important;
 }
 
-/* 2. Componente message-list: flex column para distribuir espaço */
+/* 2. Componente MessageList: flex column */
 .chat-view-messages .cometchat-message-list {
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+/* 3. Body do MessageList: distribui espaço, sem scroll aqui */
+.chat-view-messages .cometchat-message-list__body {
+  flex: 1 !important;
+  min-height: 0 !important;
   overflow: hidden !important;
 }
 
-/* 3. Body do message-list: recebe overflow-y: auto — É O SCROLL CONTAINER */
-.chat-view-messages .cometchat-message-list__body {
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  flex: 1 !important;
-  min-height: 0 !important;
+/* 4. Inner .cometchat (CometChatList root): overridar height:fit-content !important
+      que o CometChat aplica após carregar as mensagens */
+.chat-view-messages .cometchat-message-list__body > .cometchat,
+.chat-view-messages .cometchat-message-list-loaded > .cometchat-message-list__body > .cometchat {
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
-/* 4. Elementos internos: podem crescer livremente (fit-content OK aqui) */
-.chat-view-messages .cometchat-message-list-loaded > .cometchat-message-list__body > .cometchat {
-  height: auto !important;
-  max-height: none !important;
+/* 5. CometChatList: propagar altura */
+.chat-view-messages .cometchat-list {
+  height: 100% !important;
+  overflow: hidden !important;
 }
+
+/* 6. SCROLL CONTAINER REAL: .cometchat-list__body (usado pelo próprio CometChat) */
+.chat-view-messages .cometchat-list__body,
 .chat-view-messages .cometchat-message-list-loaded .cometchat-message-list__body .cometchat-list__body {
-  height: auto !important;
-  max-height: none !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 }
+
 
 

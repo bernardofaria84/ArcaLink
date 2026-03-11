@@ -1,0 +1,92 @@
+{
+  "summary": "Iteration 8 — New CSS approach (height:100% chain to .cometchat-list__body) WORKS: scrollHeight=1439 > clientHeight=386, overflowY=auto. Last messages VISIBLE. Auto-scroll after send WORKS. HOWEVER: scroll-up to history is STILL BLOCKED — CometChat resets scrollTop from 0 back to 1053 within 100ms. RCA confirmed: our custom MutationObserver in ChatApp.js fires on every CometChat DOM update and unconditionally resets scrollTop to bottom, preventing any manual scroll-up.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ChatApp.js — MutationObserver scrollToBottom",
+        "issue": "CRITICAL (scroll history): MutationObserver in useEffect fires on every CometChat DOM mutation (receipt updates, online indicators, etc.) and unconditionally calls scrollTop = scrollHeight. This resets scroll position to bottom within ~100ms, preventing user from reading history. Confirmed: JS scrollTop=0 works synchronously (afterSet=0) but is reset to 1053 after 100ms and 1000ms.",
+        "selector": ".cometchat-list__body",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "tests_passed": {
+    "1_cometchat_list_body_scroll": "PASS — .cometchat-list__body: scrollHeight=1439 > clientHeight=386, overflowY=auto, height=386px. REAL DOM scroll container confirmed. (Was scrollHeight=clientHeight=504 in iteration 7 — MAJOR IMPROVEMENT)",
+    "2_scroll_at_bottom_on_open": "PASS — scrollTop=1053 exactly at bottom (1439-386=1053) when chat opens. Last message visible.",
+    "3_last_message_visible": "PASS — 'Teste scroll iteracao 8' message visible at bottom of viewport.",
+    "4_send_new_message_auto_scroll": "PASS — After sending 'Teste scroll iteracao 8': scrollHeight grew to 1439, scrollTop=1053, atBottom=true. Auto-scroll after new message works.",
+    "5_login": "PASS — Login as dr.joao@clinica.com (MOCKED).",
+    "6_grupos_tab": "PASS — Grupos tab navigates correctly, shows 'Pre-Natal - Maria Silva' group.",
+    "7_back_button": "PASS — Back button from group chat returns to Grupos list.",
+    "8_profile_tab": "PASS — Profile tab shows 'Dr. João Silva' user info.",
+    "9_details_panel": "PASS — Details panel opens showing 'Pre-Natal - Maria Silva' with 2 members, Maria Silva (Paciente/Participante) and Dr. João Silva (Medico/Admin). Closes correctly.",
+    "10_conversas_tab": "PASS — Conversas tab navigates correctly."
+  },
+
+  "tests_failed": {
+    "1_scroll_up_history": "FAIL — Scroll-up to view history does NOT work. PageUp and mouse wheel both fail. JS scrollTop=0 is reset to 1053 within 100ms by CometChat's internal scroll management (RCA confirmed). User cannot view older messages.",
+    "2_keyboard_scroll_physical": "FAIL — Keyboard PageUp, mouse wheel do not move .cometchat-list__body scrollTop. Blocked by overlapping layers or focus issues in Playwright + PhoneMockup wrapper."
+  },
+
+  "dom_dimensions_iteration_8": {
+    "chat_view_messages": "sh=386, ch=386, oy=hidden",
+    "cometchat_outer": "sh=386, ch=386, oy=hidden, h=386px (CORRECT — constrained)",
+    "cometchat_message_list": "sh=386, ch=386, oy=visible, h=386px",
+    "cometchat_message_list_body": "sh=386, ch=386, oy=hidden, h=386px",
+    "cometchat_message_list_body_inner": "sh=386, ch=386, oy=visible, h=386px",
+    "cometchat_list": "sh=386, ch=386, oy=hidden, h=386px",
+    "cometchat_list_body": "sh=1439, ch=386, st=1053, oy=AUTO, h=386px — REAL SCROLL CONTAINER!"
+  },
+
+  "comparison_iter7_vs_iter8": {
+    "iter7_cometchat_list_body": "sh=1524, ch=504, st=0, oy=hidden auto (NO REAL SCROLL — CSS clipping)",
+    "iter8_cometchat_list_body": "sh=1439, ch=386, st=1053, oy=auto (REAL SCROLL — height:100% chain works!)",
+    "improvement": "Iteration 8 CSS successfully made .cometchat-list__body a REAL scroll container with scrollHeight > clientHeight and scrollTop at bottom"
+  },
+
+  "rca_of_scroll_up_issue": {
+    "confirmed_root_cause": "ChatApp.js useEffect MutationObserver fires on EVERY CometChat DOM mutation (not just new messages). Observer calls scrollToBottom() unconditionally via requestAnimationFrame. This includes subtle CometChat internal mutations (read receipts, timestamps, online status updates). Result: any user scroll-up is overridden within one animation frame (~100ms).",
+    "evidence": "scrollTop set to 0 synchronously succeeds (afterSet=0). After 100ms: scrollTop=1053 (back to bottom). After 1000ms: scrollTop=1053 still (continuous reset).",
+    "fix_required": "Change MutationObserver callback to check 'was user near bottom BEFORE mutation?' — only auto-scroll if user was already near bottom. Code fix:\n\nconst observer = new MutationObserver(() => {\n  const wasNearBottom = scrollable.scrollHeight - scrollable.scrollTop - scrollable.clientHeight < 150;\n  cancelAnimationFrame(rafId);\n  if (wasNearBottom) {\n    rafId = requestAnimationFrame(scrollToBottom);\n  }\n});",
+    "secondary_factor": "CometChat's own scrollToBottomOnNewMessages={true} prop also resets scroll on new messages, but only fires when NEW messages arrive (not continuously). This is expected behavior and not the primary issue."
+  },
+
+  "test_report_links": ["/app/test_reports/iteration_8.json"],
+
+  "action_items": [
+    "HIGH PRIORITY — Fix MutationObserver in ChatApp.js scrollToBottom useEffect: add 'was near bottom' check before scrolling. Only call scrollToBottom() if user was already within 150px of bottom before the mutation. This allows scroll-up to history without breaking auto-scroll on new messages.",
+    "VERIFY: After above fix, test that (a) user can scroll up to see older messages, and (b) new messages still auto-scroll when user is at bottom.",
+    "OPTIONAL: Consider adding a 'scroll to bottom' floating button that appears when user is scrolled up (common WhatsApp pattern) to provide explicit UX for returning to latest messages."
+  ],
+
+  "critical_code_review_comments": [
+    "ChatApp.js lines 619-629: MutationObserver calls scrollToBottom() unconditionally on every DOM mutation. Must add near-bottom check: const wasNear = s.scrollHeight - s.scrollTop - s.clientHeight < 150; if (wasNear) rafId = requestAnimationFrame(scrollToBottom);",
+    "ChatApp.js: The scrollToBottom logic itself targets .cometchat-list__body first — this is correct now and will work when the observer is fixed.",
+    "App.css: The height:100% chain is working correctly — .cometchat-list__body achieves sh=1439 > ch=386 with oy=auto. No CSS changes needed."
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "80% (CSS fix works, last message visible, auto-scroll on send works, all regression pass; scroll-up to history fails due to MutationObserver issue in ChatApp.js)"
+  },
+
+  "mocked_apis": "Login is MOCKED — email->UID mapping in LoginPage.js MVP_USERS.",
+
+  "seed_data_creation": "Sent test message 'Teste scroll iteracao 8' in Pre-Natal group during testing. Group now has 12+ messages.",
+
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "ArcaLink iteration 8. CSS fix CONFIRMED WORKING: .cometchat-list__body now has sh=1439 > ch=386, oy=auto (REAL scroll). Last messages visible. Auto-scroll after send works. PENDING: Scroll-up history blocked by MutationObserver in ChatApp.js lines 619-629 that unconditionally resets scrollTop on every mutation. Fix: add 'was near bottom' guard before calling scrollToBottom(). After fix, test: (1) can scroll up to see older messages, (2) auto-scroll still works on new message. Login: dr.joao@clinica.com/senha123 (MOCKED). URL: https://medchat-secure.preview.emergentagent.com. Group 'Pre-Natal - Maria Silva' has 12+ messages."
+}
