@@ -61,11 +61,15 @@ Criar um aplicativo de comunicação segura para a área médica chamado ArcaLin
 - **Nome de usuário atualizado**: `CometChat.updateCurrentUserDetails()` após login
 
 ### ✅ FASE 3 — Auto-scroll + Fix de Navegação (2026-03-11)
-- **Auto-scroll implementado**: `MutationObserver` + `setTimeout(400ms)` no `messagesContainerRef` detecta novas mensagens e faz `scrollTop = scrollHeight` automaticamente — funciona em chat individual e de grupo
-- **Fix de navegação Grupos→Voltar**: `openChat()` agora recebe parâmetro `tab` (default `'chats'`); `handleGroupItemClick` e `handleGroupCreated` passam `'groups'`, preservando a aba de origem ao pressionar Voltar
+- **Auto-scroll corrigido (v2)**: Seletor `.cometchat-list__body` (elemento real scrollável do CometChat), 3 timeouts (50/300/800ms) + `requestAnimationFrame`, prop nativa `scrollToBottomOnNewMessages={true}`
+- **Fix de navegação Grupos→Voltar**: `openChat()` recebe parâmetro `tab`; grupos preservam aba ao pressionar Voltar
 
-### ✅ Testes (iteração 3) — 100% passando (7/7)
-- Login, auto-scroll individual, auto-scroll grupo, envio de mensagem mantém scroll no final, botão voltar, aba grupos
+### ✅ FASE 4 — Painel de Detalhes do Chat (2026-03-11)
+- **DetailsPanel**: ao clicar no header do chat, painel desliza do topo com nome/status/UID (individual) ou nome/GUID/lista de membros com papel (grupo)
+- **Solução stopPropagation**: botão transparente absolutamente posicionado (`.chat-header-overlay-btn`, z-index:5) captura click antes do CometChat UIKit bloquear propagação
+
+### ✅ Testes (iteração 5) — 100% passando (7/7)
+- Auto-scroll individual/grupo, painel detalhes click real (individual + grupo), conteúdo correto, fechar painel
 
 ## Known Issues (aceitáveis)
 - Nome do contato mostra email até CometChat sincronizar (comportamento normal do SDK)
