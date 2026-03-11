@@ -1,212 +1,88 @@
-# ArcaLink — Product Requirements Document
+# ArcaLink — PRD (Produto de Comunicação Médica Segura)
 
-**Data de criação:** Março 2026  
-**Versão:** v1.0.0-MVP  
-**Repositório:** bernardofaria84/ArcaLink (branch: v5)  
-**Stack:** React Native 0.81.4 + TypeScript 5.8.3 + CometChat UIKit v5.2.11 + React Navigation 7 + Zustand 5
+## Problema Original
+Criar um aplicativo de comunicação segura para a área médica chamado ArcaLink, em conformidade com a LGPD. Baseado no CometChat UIKit com identidade visual própria, voltado para o mercado brasileiro.
 
----
-
-## 1. VISÃO DO PRODUTO
-
-ArcaLink é um aplicativo de comunicação segura para a área médica, que conecta médicos, equipes de saúde e pacientes em grupos de chat privados, eliminando a necessidade de médicos usarem seus números pessoais de WhatsApp.
-
-**Domínios:** arcalink.com.br / arcalink.ai.br  
-**Lojas alvo:** App Store (iOS) + Google Play (Android)  
-**Conformidade:** LGPD (Lei Geral de Proteção de Dados)  
-
----
-
-## 2. CREDENCIAIS DE PRODUÇÃO (MVP)
-
-| Parâmetro | Valor |
-|-----------|-------|
-| appId | 1676216c370017025 |
-| authKey | ca81cc34b6ce9e46fa7c685bcf3a90a0940b54c9 |
-| region | us |
-
-**Usuários de teste:**
-- `dr.joao@clinica.com` / senha: `senha123` → UID: `cometchat-uid-1` (médico)
-- `maria.silva@email.com` / senha: `senha123` → UID: `cometchat-uid-2` (paciente)
-
----
-
-## 3. PAPÉIS DE USUÁRIO
-
-| Role | Nome | Permissões |
-|------|------|-----------|
-| `medico` | Médico | Criar grupos, adicionar/remover membros, encerrar grupos, enviar mensagens |
-| `paciente` | Paciente | Participar de grupos por convite, enviar mensagens, mencionar participantes |
-
----
-
-## 4. IDENTIDADE VISUAL
-
-**Paleta de Cores:**
-- Primary: `#0A6E6E` (verde-azulado médico)
-- Primary Light: `#E6F3F3`
-- Secondary: `#1A4A7A`
-- Error: `#C0392B`
-- Success: `#2D9E6B`
-- Background: `#F7FAFC`
-
-**Tipografia:** Inter (Regular, Medium, Bold)  
-**Nome:** ArcaLink  
-**Tagline:** "Comunicação médica segura"
-
----
-
-## 5. ARQUITETURA DE ARQUIVOS
+## Arquitetura
 
 ```
-examples/SampleApp/
-├── App.tsx                          ✅ Tema ArcaLink + pt-BR i18n
-├── src/
-│   ├── navigation/
-│   │   ├── RootStackNavigator.tsx   ✅ LoginScreen em vez de SampleUser
-│   │   ├── BottomTabNavigator.tsx   ✅ Conversas, Grupos, Perfil
-│   │   └── types.ts                 ✅ BottomTabParamList atualizado
-│   ├── components/
-│   │   ├── login/
-│   │   │   └── LoginScreen.tsx      ✅ NOVO: email + senha, ArcaLink branding
-│   │   ├── conversations/
-│   │   │   └── screens/
-│   │   │       ├── GroupInfo.tsx     ✅ Botão "Encerrar Grupo" + modal LGPD
-│   │   │       └── Conversations.tsx ✅ Logout → Login, sem AI
-│   │   ├── groups/
-│   │   │   ├── Groups.tsx            ✅ Role check médico para criar grupos
-│   │   │   ├── GroupHelper.tsx       ✅ Apenas grupos Privados
-│   │   │   └── CriarGrupoMedico.tsx  ✅ NOVO: fluxo médico, busca paciente
-│   │   └── perfil/
-│   │       └── PerfilScreen.tsx      ✅ NOVO: perfil + logout
-│   ├── hooks/
-│   │   └── useUserRole.ts            ✅ NOVO: hook de verificação de role
-│   ├── localization/
-│   │   └── pt-BR.ts                  ✅ NOVO: traduções em português
-│   ├── theme/
-│   │   └── ArcaLinkTheme.ts          ✅ NOVO: tema visual ArcaLink
-│   ├── config/
-│   │   └── config.json               ✅ Tema verde, tabs, features ArcaLink
-│   └── utils/
-│       └── AppConstants.tsx          ✅ Credenciais ArcaLink + PERFIL constant
+/app
+├── arcalink/               # Projeto React Native (modificado, não compilado/testado)
+│   └── examples/SampleApp/ # Código-fonte do app nativo
+├── backend/                # FastAPI mínimo (rota raiz apenas)
+│   └── server.py
+└── frontend/               # Web Preview React (em produção)
+    ├── src/
+    │   ├── App.js          # Inicialização CometChat UIKit, CometChatLocalize pt, logout
+    │   ├── App.css         # TEMA WHATSAPP-STYLE: overrides CometChat (teal, bubbles)
+    │   ├── i18n/ptBR.js    # Referência de traduções PT-BR (não usadas — locale 'pt' embutido)
+    │   └── components/
+    │       ├── ChatApp.js       # Lógica principal do chat
+    │       ├── ChatApp.css      # Layout chat-view, header teal, back button
+    │       ├── LoginPage.js     # Login MVP + updateCurrentUserDetails
+    │       ├── LoginPage.css    # Estilos da tela de login
+    │       └── PhoneMockup.js   # Mockup de iPhone
+    └── public/
 ```
 
----
+## Credenciais de Teste
+- **Médico:** dr.joao@clinica.com / senha123 (UID: cometchat-uid-1)
+- **Paciente:** maria.silva@email.com / senha123 (UID: cometchat-uid-2)
+- **CometChat App ID:** 1676216c370017025
+- **CometChat Region:** us
 
-## 6. O QUE FOI IMPLEMENTADO (MVP - Março 2026)
+## Stack Técnico
+- **Frontend Preview:** React 18, CometChat UIKit React v6.3.11
+- **Backend:** FastAPI (mínimo)
+- **App Nativo:** React Native 0.73, CometChat RN UIKit v5.2.11
 
-### ✅ Tarefa 1 — Sistema de Autenticação
-- LoginScreen.tsx com email + senha
-- Validação de formato de email
-- Campo senha com show/hide
-- Mapeamento MVP: email → UID CometChat
-- Comentários claros para migração para backend + JWT em produção
+## O que foi implementado
 
-### ✅ Tarefa 2 — Identidade Visual
-- Paleta de cores ArcaLink (#0A6E6E)
-- Tipografia Inter
-- Branding "ArcaLink" em toda a interface
-- config.json atualizado com cores e tipografia
+### ✅ FASE 1 — MVP Web Preview (sessão anterior)
+- Login com email/senha + botões demo (Médico/Paciente)
+- Mockup iPhone com abas: Conversas, Grupos, Perfil
+- Integração CometChat Web SDK
+- Controle por papel (médico/paciente): médico vê botão "+"
+- Modal de criar grupo
+- Edição de perfil + logout
 
-### ✅ Tarefa 3 — Navegação
-- Removidas abas Users e Calls da barra de navegação
-- Mantidas: Conversas (Chats) e Grupos
-- Adicionada aba Perfil
+### ✅ FASE 2 — Visual 100% WhatsApp (sessão atual, 2026-03-11)
+- **CSS do CometChat UIKit importado corretamente** (`@cometchat/chat-uikit-react/css-variables.css`)
+- **Login corrigido** para usar `CometChatUIKit.login()` (não `CometChat.login()`) — inicializa DataSource
+- **Tema teal ArcaLink** via override de CSS variables:
+  - `--cometchat-primary-color: #0A6E6E`
+  - `--cometchat-extended-primary-color-500: #0A6E6E` (avatares)
+- **Bubbles WhatsApp**: saída=teal, entrada=branco, fundo sandy #ECE5DD
+- **Header teal** com CSS variable scoped (`--cometchat-background-color-01: transparent`)
+- **Botão "←" de voltar** customizado (`chat-back-btn`)
+- **PT-BR completo**: `CometChatLocalize.init({language: 'pt'})` → "Hoje", "Ontem", "Visto por último", "Digite sua mensagem aqui"
+- **Compositor completo**: +, microfone, emoji, sticker, botão enviar teal
+- **Logout corrigido**: setTimeout 150ms para evitar React error overlay
+- **Nome de usuário atualizado**: `CometChat.updateCurrentUserDetails()` após login
 
-### ✅ Tarefa 4 — Controle de Permissões
-- Hook `useUserRole` implementado
-- Botão criar grupo visível somente para médicos
-- GroupInfo: "Encerrar Grupo" somente para médicos
+### ✅ Testes (iteração 2) — 100% passando (7/7)
+- Back button, logout sem erro, envio de mensagem, lista de conversas, PT-BR, grupos, login paciente
 
-### ✅ Tarefa 5 — Sem Atendente Virtual
-- AI Assistants removido do menu de Conversas
-- aiUserCopilot desabilitado no config.json
+## Known Issues (aceitáveis)
+- Nome do contato mostra email até CometChat sincronizar (comportamento normal do SDK)
+- Avatar "P-" em "Pre-Natal" (CometChat usa hífen como caractere de inicial)
+- App React Native (`/app/arcalink`) nunca compilado/testado
 
-### ✅ Tarefa 6 — Features do Chat
-- videoSharing: false
-- messageTranslation: false
-- polls: false
-- collaborativeWhiteboard: false
-- collaborativeDocument: false
-- stickers: false
-- joinLeaveGroup: false
-- banUsers: false
+## MOCKED
+- **Login**: email→UID mapeado no frontend, sem validação real de senha por backend
 
-### ⏳ Tarefa 7 — Notificações Push
-- Adiado para versão pós-MVP
-- fcmProviderId e apnsProviderId placeholder em AppConstants
+## Backlog Priorizado
 
-### ✅ Tarefa 8 — Internacionalização pt-BR
-- Arquivo pt-BR.ts com +80 chaves de tradução
-- CometChatI18nProvider configurado com selectedLanguage="pt"
+### P0 — Pré-lançamento
+- [ ] Backend de autenticação real com JWT (substituir MVP_USERS)
+- [ ] Compilar e testar app React Native em emulador/dispositivo real
 
-### ✅ Tarefa 9 — Tela de Perfil
-- PerfilScreen.tsx com avatar, nome, email, role, CRM (médicos)
-- Logout com confirmação + limpeza de AsyncStorage
+### P1 — Próximas funcionalidades
+- [ ] Notificações Push (FCM Android + APNs iOS)
+- [ ] "Esqueci minha senha" com link de reset
+- [ ] Fluxo "Encerrar Grupo de Consulta" funcional no web preview
 
-### ✅ Tarefa 10 — Encerramento de Grupo
-- Botão "Encerrar Grupo" em GroupInfo (médicos owner/admin apenas)
-- Modal de confirmação com texto LGPD
-- Envio de mensagem automática
-- Remoção de todos os membros exceto o médico
-- Navegação de volta
-
----
-
-## 7. BACKLOG PRIORIZADO
-
-### P0 — Crítico (Antes do Lançamento)
-- [ ] Backend ArcaLink: API de autenticação com JWT
-- [ ] Substituir login MVP (email→UID) por CometChatUIKit.login({ authToken })
-- [ ] Configurar Push Notifications (FCM + APNs)
-- [ ] Adicionar mais usuários de teste no CometChat
-- [ ] Testar em emulador iOS e Android
-
-### P1 — Alta Prioridade
-- [ ] Logo definitivo do ArcaLink (substituir placeholder de texto)
-- [ ] Splash screen com identidade ArcaLink
-- [ ] CRM de médicos via metadata do CometChat ou backend
-- [ ] Edição de perfil (foto, nome)
-- [ ] Recuperação de senha
-
-### P2 — Médio Prazo
-- [ ] Filtro de pacientes por CPF na busca do CriarGrupoMedico
-- [ ] Dashboard de consultas para médicos
-- [ ] Arquivamento de grupos (sem exclusão física)
-- [ ] Relatórios de conformidade LGPD
-- [ ] Tema Dark Mode
-
-### Futuro / Nice-to-Have
-- [ ] Atendente virtual IA (TAREFA 5 — versão futura)
-- [ ] Integração com prontuário eletrônico
-- [ ] Assinatura digital de documentos
-
----
-
-## 8. INSTRUÇÕES DE BUILD
-
-```bash
-# Clone o repositório
-git clone -b v5 https://github.com/bernardofaria84/ArcaLink.git
-cd ArcaLink/examples/SampleApp
-
-# Instalar dependências
-yarn install
-
-# iOS
-cd ios && pod install && cd ..
-npx react-native run-ios
-
-# Android
-npx react-native run-android
-```
-
----
-
-## 9. NOTAS TÉCNICAS IMPORTANTES
-
-1. **Nunca alterar `packages/ChatUiKit/`** — código do UIKit CometChat
-2. **Login MVP**: usa `uid` diretamente. Produção deve usar `authToken` via backend
-3. **Grupos**: SEMPRE do tipo PRIVATE no ArcaLink (regra de negócio)
-4. **LGPD**: mensagens preservadas 6 meses após encerramento de grupo
-5. **Credenciais**: nunca commitar authKey em repositório público
+### P2 — Melhorias
+- [ ] Editar perfil com upload de foto (atualmente modal visual sem persistência)
+- [ ] Indicador online/offline em tempo real na lista de conversas
+- [ ] Busca de mensagens
