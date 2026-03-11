@@ -1,0 +1,55 @@
+{
+  "summary": "Iteration 3 focused on auto-scroll feature testing. All 7 features from the review request were tested. Auto-scroll works correctly for both individual and group chats. One pre-existing UX issue found: pressing back from a group chat (opened from Groups tab) returns to Conversas tab instead of Groups tab.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Groups → Open Group → Back",
+        "issues": [
+          "MINOR/PRE-EXISTING: openChat() always sets activeTab='chats' (line 425 ChatApp.js). When user navigates from Groups tab → clicks a group → presses ← back, they land on Conversas tab instead of Grupos tab. The renderGroups() chat view (with data-testid='chat-back-btn-groups') is unreachable dead code because openChat() overrides the tab to 'chats'. This was not introduced by the auto-scroll feature."
+        ]
+      }
+    ]
+  },
+  "tests_passed": {
+    "1_login": "PASS — dr.joao@clinica.com / senha123 login works correctly via CometChatUIKit.login(uid)",
+    "2_open_conversation": "PASS — Clicking Maria Silva conversation opens chat view with messages visible",
+    "3_auto_scroll_individual": "PASS — On opening chat, messages container isAtBottom=True. Latest message 'Olá ArcaLink teste' visible at bottom. MutationObserver + 400ms timeout scroll working.",
+    "4_auto_scroll_group": "PASS — Opening Pre-Natal group chat from Groups tab scrolls to bottom (scrollHeight=1451, clientHeight=1451, isAtBottom=True). Most recent emoji message visible at bottom of screen.",
+    "5_send_message_scroll": "PASS — Sent 'Teste auto-scroll ArcaLink'. scrollHeight increased from 252→325, isAtBottom=True after send. New message visible at bottom.",
+    "6_back_button": "PASS — [data-testid='chat-back-btn'] visible in individual chat header, clicking returns to conversations list, tab bar reappears",
+    "7_groups_tab": "PASS — Grupos tab opens correctly, shows 'Pre-Natal - Maria Silva' with 2 Membros, group can be entered. Back button works."
+  },
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "action_items": [
+    "LOW/OPTIONAL: Fix openChat() in ChatApp.js (line 425) to preserve the originating tab. When handleGroupItemClick calls openChat(), the back button should return to Groups tab, not Conversas. Suggested fix: pass originating tab as parameter to openChat() and restore it in handleBack(). Also removes the dead code in renderGroups() chat view."
+  ],
+  "critical_code_review_comments": [
+    "ChatApp.js line 421-426: openChat() always sets setActiveTab('chats') regardless of originating tab. This makes renderGroups() chat view branch (lines 561-601) unreachable/dead code. The data-testid='chat-back-btn-groups' button at line 566 is never rendered. This is a pre-existing UX regression: navigating Groups → Group Chat → Back lands on Conversas instead of Grupos.",
+    "ChatApp.js lines 470-502: Auto-scroll implementation using MutationObserver is correct. The 400ms setTimeout + MutationObserver combination works well for both initial load and new messages. scrollToBottom() correctly targets .cometchat-message-list first, falling back to container/firstElementChild."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "100% (7/7 test items passing)"
+  },
+  "mocked_apis": "Login is MOCKED — email→UID mapping in LoginPage.js MVP_USERS, no real backend auth. CometChatUIKit.login(uid) handles actual session.",
+  "seed_data_creation": "Sent test messages: 'Teste auto-scroll ArcaLink' to dr.joao<->maria.silva conversation during iteration 3 testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "ArcaLink iteration 3: Auto-scroll fully tested and working. All 7 features pass. Key selectors: data-testid='chat-back-btn' (individual + group chats, both render via renderChats()), '.cometchat-message-composer__input[contenteditable]' for message input, '.cometchat-message-composer__send-button' for send. Groups tab back button 'chat-back-btn-groups' is dead code never rendered. openChat() always switches activeTab to 'chats'. Login: demo-chip.medico + button[type=submit]. Test messages from iterations 1-3 now in conversation.",
+  "rca_of_issues": {
+    "back_from_groups_returns_to_chats": {
+      "root_cause": "openChat() (ChatApp.js line 421) always calls setActiveTab('chats') regardless of which tab the user came from. handleGroupItemClick calls openChat(null, group) which forces chats tab. handleBack() (line 440) only sets inChatView=false without restoring the originating tab.",
+      "reproduction": "Login → Grupos tab → click Pre-Natal group → press ← back → observe Conversas tab is now active instead of Grupos",
+      "mitigation": "Modify openChat() to accept an optional 'fromTab' parameter. In handleBack(), restore activeTab to the saved fromTab value. Remove dead code in renderGroups() chat view branch.",
+      "severity": "LOW - functionality works, only UX/navigation issue",
+      "pre_existing": true
+    }
+  }
+}

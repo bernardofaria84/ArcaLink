@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   CometChatConversations,
   CometChatMessageList,
@@ -467,6 +467,40 @@ function ChatApp({ onLogout }) {
 
   const hasActiveChat = activeUser || activeGroup;
 
+  // ── Auto-scroll para a última mensagem ──
+  const messagesContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (!inChatView) return;
+
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const scrollToBottom = () => {
+      // Tenta encontrar o elemento scrollável interno do CometChat UIKit
+      const scrollable =
+        container.querySelector('.cometchat-message-list') ||
+        container.querySelector('[class*="message-list"]') ||
+        container.firstElementChild ||
+        container;
+      if (scrollable) {
+        scrollable.scrollTop = scrollable.scrollHeight;
+      }
+    };
+
+    // Scroll inicial ao abrir o chat (aguarda o UIKit renderizar)
+    const timeout = setTimeout(scrollToBottom, 400);
+
+    // Monitora novas mensagens via MutationObserver
+    const observer = new MutationObserver(scrollToBottom);
+    observer.observe(container, { childList: true, subtree: true });
+
+    return () => {
+      clearTimeout(timeout);
+      observer.disconnect();
+    };
+  }, [inChatView, activeUser, activeGroup]);
+
   /* ── RENDER: Conversas ── */
   const renderChats = () => (
     <div className="tab-content">
@@ -484,7 +518,7 @@ function ChatApp({ onLogout }) {
               onBack={handleBack}
             />
           </div>
-          <div className="chat-view-messages">
+          <div className="chat-view-messages" ref={messagesContainerRef}>
             <CometChatMessageList
               user={activeUser || undefined}
               group={activeGroup || undefined}
@@ -537,7 +571,7 @@ function ChatApp({ onLogout }) {
               onBack={handleBack}
             />
           </div>
-          <div className="chat-view-messages">
+          <div className="chat-view-messages" ref={messagesContainerRef}>
             <CometChatMessageList group={activeGroup || undefined} />
           </div>
           <div className="chat-view-composer">
