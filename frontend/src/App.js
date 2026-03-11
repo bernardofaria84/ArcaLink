@@ -49,7 +49,8 @@ function App() {
     try {
       await CometChatUIKit.logout();
     } catch (_) {}
-    setIsLoggedIn(false);
+    // Pequeno delay para o CometChat limpar listeners antes de desmontar o ChatApp
+    setTimeout(() => setIsLoggedIn(false), 150);
   };
 
   const renderContent = () => {

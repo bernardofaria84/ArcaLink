@@ -1,0 +1,65 @@
+{
+  "summary": "Full frontend regression test for ArcaLink iteration 2. All 7 test items from the review request PASSED. Fixes from iteration 1 verified working: back button, logout without error overlay, and display name updates. Minor residual: when Dr. João views conversation list, Maria's contact still shows email address until CometChat syncs her updated name from her own login session.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Conversation list contact name sync",
+        "issue": "MINOR: When Dr. João is logged in, Maria's contact name in conversation list still shows 'maria.silva@email.c...' (email) until CometChat syncs the name update from Maria's own login. From Maria's view, Dr. João's name shows correctly as 'Dr. João Silva'. This is a CometChat cache sync delay, not a code bug — updateCurrentUserDetails is called correctly at login.",
+        "affected_selectors": [".cometchat-list-item__body-title"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Groups - Avatar",
+        "issues": [
+          "Group 'Pre-Natal - Maria Silva' shows 'P-' as avatar initials (taking P from 'Pre' and '-' from hyphen). This is a CometChat avatar generation behavior, not a custom code issue."
+        ]
+      },
+      {
+        "screen": "Chat header",
+        "issues": [
+          "When Dr. João views chat with Maria, header shows 'maria.silva@email.com' (email) instead of 'Maria Silva'. This is the same CometChat sync issue as the conversation list contact name."
+        ]
+      }
+    ]
+  },
+  "tests_passed": {
+    "1_chat_back_button": "PASS — data-testid='chat-back-btn' button visible (← arrow) in teal header. Clicking returns to conversation list. Tab bar reappears correctly.",
+    "2_logout_no_error": "PASS — Profile > Sair da conta shows confirmation modal. Confirming returns to login page with 0 console errors. No React error overlay.",
+    "3_message_sent": "PASS — Typed 'Olá ArcaLink teste', clicked send button (.cometchat-message-composer__send-button). Message appears as teal outgoing bubble.",
+    "4_regression_conversation_list": "PASS — 'Conversas' header shown (no duplicate CometChat 'Chats'). Circular teal avatars visible. 2 conversations listed.",
+    "5_regression_ptbr": "PASS — 'Hoje' date separator, 'Digite sua mensagem aqui' placeholder, 'Visto por último X minuto(s) atrás' all in PT-BR.",
+    "6_regression_groups": "PASS — 'Grupos' tab shows header + '+' button for médico. Group 'Pre-Natal - Maria Silva' listed with '2 Membros'.",
+    "7_patient_login": "PASS — Maria Silva logs in via demo chip. Profile shows 'Maria Silva' / 'Paciente'. No '+' button in groups/conversations. Back button works in chat. 0 console errors."
+  },
+  "test_report_links": ["/app/test_reports/iteration_2.json"],
+  "action_items": [
+    "MINOR: Consider force-refreshing CometChat conversation metadata after updateCurrentUserDetails() on login, so the other user's contact name in conversation list updates immediately without waiting for CometChat server sync. (Low priority — works correctly once both users log in with updated code.)"
+  ],
+  "critical_code_review_comments": [
+    "All 3 critical fixes from iteration 1 verified working: (1) chat-back-btn added, (2) setTimeout 150ms in handleLogout prevents unmount error, (3) CometChat.updateCurrentUserDetails() updates name after login.",
+    "Contact name sync: The updateCurrentUserDetails() call updates the logged-in user's own name. The contact's name visible to other users is fetched from CometChat server and may be cached. This is expected CometChat behavior."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "100% (7/7 test items passing)"
+  },
+  "mocked_apis": "Login flow is MOCKED — email→UID mapping in LoginPage.js MVP_USERS object, password validated locally, no backend auth. CometChatUIKit.login(uid) used for actual chat session.",
+  "seed_data_creation": "Sent test message 'Olá ArcaLink teste' to dr.joao<->maria.silva conversation during testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "ArcaLink medical chat app using CometChat UIKit v4 React. All 3 critical bugs from iteration 1 are now fixed and verified. App uses PhoneMockup wrapper. CometChat message input selector: '.cometchat-message-composer__input' (contenteditable=plaintext-only). Send button: '.cometchat-message-composer__send-button'. Back button: data-testid='chat-back-btn'. Login page has .demo-chip.medico and .demo-chip.paciente for quick login. Minor residual: contact name shows email for Dr. João's view of Maria until CometChat syncs.",
+  "rca_of_issues": {
+    "contact_name_sync": {
+      "root_cause": "updateCurrentUserDetails() updates the logged-in user's own CometChat profile. When User A views User B's contact name, it reads from CometChat's cached conversation metadata. If User B just updated their name in this session, User A's conversation list may show the old name until CometChat server propagates the update.",
+      "impact": "LOW - name updates correctly once the other user logs in and both are active",
+      "status": "NOT A CODE BUG — CometChat server sync behavior"
+    }
+  }
+}

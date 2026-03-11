@@ -133,14 +133,32 @@
   flex-shrink: 0;
   background: #0A6E6E;
   overflow: hidden;
+  display: flex;
+  align-items: center;
   /* Sobrescreve a variável CometChat para que o header interno fique transparente */
   --cometchat-background-color-01: transparent;
   --cometchat-neutral-color-50: transparent;
 }
 
+/* Botão de voltar customizado — CometChat não renderiza back button por padrão */
+.chat-back-btn {
+  background: none;
+  border: none;
+  color: #FFFFFF;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 10px 4px 10px 14px;
+  flex-shrink: 0;
+  line-height: 1;
+  z-index: 1;
+}
+
 /* CometChatMessageHeader dentro do chat-view-header: fundo transparente */
 .chat-view-header .cometchat-message-header {
   background: transparent !important;
+  flex: 1;
+  min-width: 0;
 }
 
 .chat-view-messages {

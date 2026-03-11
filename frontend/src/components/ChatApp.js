@@ -474,6 +474,10 @@ function ChatApp({ onLogout }) {
         // Tela de mensagens
         <div className="chat-view">
           <div className="chat-view-header">
+            {/* Botão de voltar customizado — CometChat UIKit não renderiza o back button por padrão */}
+            <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn">
+              ←
+            </button>
             <CometChatMessageHeader
               user={activeUser || undefined}
               group={activeGroup || undefined}
@@ -524,6 +528,10 @@ function ChatApp({ onLogout }) {
         // Tela de mensagens de grupo (quando vem de Grupos)
         <div className="chat-view">
           <div className="chat-view-header">
+            {/* Botão de voltar customizado */}
+            <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn-groups">
+              ←
+            </button>
             <CometChatMessageHeader
               group={activeGroup || undefined}
               onBack={handleBack}

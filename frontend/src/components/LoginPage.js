@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CometChatUIKit } from '@cometchat/chat-uikit-react';
+import { CometChat } from '@cometchat/chat-sdk-javascript';
 import './LoginPage.css';
 
 const MVP_USERS = {
@@ -34,6 +35,12 @@ function LoginPage({ onLoginSuccess }) {
       }
       // ARCALINK: MVP login — usa CometChatUIKit.login() para inicializar o DataSource corretamente
       await CometChatUIKit.login(user.uid);
+      // Atualiza o nome de exibição no CometChat (usuários foram criados com email como nome)
+      try {
+        const ccUser = new CometChat.User(user.uid);
+        ccUser.setName(user.nome);
+        await CometChat.updateCurrentUserDetails(ccUser);
+      } catch (_) { /* ignora erro de update de nome — não bloqueia o login */ }
       onLoginSuccess();
     } catch (err) {
       console.error('ArcaLink login error:', err);
