@@ -76,4 +76,7 @@ yarn-error.log
 
 # Ignore android and ios folders in SampleAppExpo
 examples/SampleAppExpo/android/
-examples/SampleAppExpo/ios/
+examples/SampleAppExpo/ios/-e 
+# Environment files
+*.env
+*.env.*
