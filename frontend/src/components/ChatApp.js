@@ -641,11 +641,18 @@ function ChatApp({ onLogout }) {
             <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn">
               ←
             </button>
-            <div className="chat-header-clickable" onClick={handleOpenDetails} data-testid="chat-header-details-btn">
+            {/* Wrapper com botão overlay transparente — captura o click ANTES do stopPropagation do CometChat */}
+            <div className="chat-header-clickable-wrap">
               <CometChatMessageHeader
                 user={activeUser || undefined}
                 group={activeGroup || undefined}
                 onBack={handleBack}
+              />
+              <button
+                className="chat-header-overlay-btn"
+                onClick={handleOpenDetails}
+                data-testid="chat-header-details-btn"
+                aria-label="Ver detalhes do contato"
               />
             </div>
           </div>
@@ -698,10 +705,16 @@ function ChatApp({ onLogout }) {
             <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn-groups">
               ←
             </button>
-            <div className="chat-header-clickable" onClick={handleOpenDetails} data-testid="chat-header-details-btn-groups">
+            <div className="chat-header-clickable-wrap">
               <CometChatMessageHeader
                 group={activeGroup || undefined}
                 onBack={handleBack}
+              />
+              <button
+                className="chat-header-overlay-btn"
+                onClick={handleOpenDetails}
+                data-testid="chat-header-details-btn-groups"
+                aria-label="Ver detalhes do grupo"
               />
             </div>
           </div>

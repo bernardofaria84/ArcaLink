@@ -156,7 +156,7 @@
 
 /* CometChatMessageHeader dentro do chat-view-header: fundo transparente */
 .chat-view-header .cometchat-message-header,
-.chat-header-clickable .cometchat-message-header {
+.chat-header-clickable-wrap .cometchat-message-header {
   background: transparent !important;
   flex: 1;
   min-width: 0;
@@ -922,17 +922,23 @@
   border-bottom: 1px solid #F7FAFC;
 }
 
-/* Header clickable wrapper */
-.chat-header-clickable {
+/* Header clickable wrapper + overlay button */
+.chat-header-clickable-wrap {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
-  /* Pequena indicação visual ao hover */
-  transition: opacity 0.15s;
+  position: relative;
 }
 
-.chat-header-clickable:hover {
-  opacity: 0.9;
+/* Botão transparente absolutamente posicionado sobre o header
+   Captura o click ANTES do stopPropagation interno do CometChat */
+.chat-header-overlay-btn {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 5;
+  /* Não bloqueia cliques no back-btn (que fica fora deste wrapper) */
 }
 .edit-profile-body {
   display: flex;
