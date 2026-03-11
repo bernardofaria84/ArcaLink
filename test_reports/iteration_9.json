@@ -1,0 +1,79 @@
+{
+  "summary": "Iteration 9 — MutationObserver 'wasNearBottom' guard CONFIRMED WORKING. All 4 critical scroll tests PASS. The fix in ChatApp.js lines 617-631 successfully: (1) opens chat at bottom, (2) allows scroll-up to history without reset, (3) auto-scrolls when sending message from history position, (4) DOM mutations while reading history do NOT reset scroll. All regression tests PASS.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Chat scroll behavior - CometChat scrollToBottomOnNewMessages",
+        "issues": [
+          "CAVEAT (not a bug): CometChat's built-in scrollToBottomOnNewMessages={true} prop is still active on CometChatMessageList. If another user sends a message while the doctor is reading history, CometChat's own prop may auto-scroll. This is separate from our custom MutationObserver fix and is CometChat's managed behavior. The custom MutationObserver guard (our fix) is working correctly and does NOT reset scroll for DOM mutations (receipts, timestamps, status updates) while user is reading history."
+        ]
+      }
+    ]
+  },
+
+  "tests_passed": {
+    "TEST_A_pre_natal_opens_at_bottom": "PASS — st=1053, sh=1439, ch=386, dist=0. Chat opens at BOTTOM, last message 'Teste iter9 autoscroll' visible.",
+    "TEST_B_scroll_up_stays_at_top": "PASS — scrollTop=0 REMAINS 0 after 200ms, 500ms, and 1000ms. MutationObserver wasNearBottom guard prevents reset when reading history. FIXED from iteration 8.",
+    "TEST_C_send_from_top_auto_scroll": "PASS — Started at scrollTop=0, sent 'Teste iter9 autoscroll', st=1126, sh=1512, dist=0, atBottom=True. Auto-scroll to bottom after sending from history view WORKS.",
+    "TEST_D_dom_mutations_no_reset": "PASS — scrollTop=0 stays 0 for 2000ms while CometChat background mutations occur (receipts, timestamps, online status). Observer guard working.",
+    "TEST_MARIA_SILVA_opens_at_bottom": "PASS — Individual chat Maria Silva: st=1126, sh=1512, ch=386, dist=0, atBottom=True.",
+    "TEST_MARIA_SILVA_scroll_up": "PASS — scrollTop set to 0, stays 0 in individual chat (same guard works).",
+    "REGRESSION_back_button_pre_natal": "PASS — Back button from Pre-Natal chat returns to Conversas list.",
+    "REGRESSION_back_button_maria_silva": "PASS — Back button from Maria Silva chat works.",
+    "REGRESSION_grupos_tab": "PASS — Grupos tab shows 'Pre-Natal - Maria Silva' group with 2 Membros.",
+    "REGRESSION_perfil_tab": "PASS — Perfil tab shows 'Dr. João Silva', Médico, UID, version.",
+    "REGRESSION_conversas_tab": "PASS — Conversas tab navigates correctly.",
+    "REGRESSION_details_panel": "PASS — Details panel shows Membros, closes correctly."
+  },
+
+  "tests_failed": {},
+
+  "dom_dimensions_iteration_9": {
+    "cometchat_list_body": "sh=1512 (grew from 1439 with new test messages), ch=386, st=1126 (at bottom), oy=auto",
+    "comparison_to_iter8": "Same scroll container confirmed working. scrollHeight grew as expected from new test messages sent."
+  },
+
+  "key_fix_confirmed": {
+    "location": "ChatApp.js lines 617-631",
+    "guard": "const distFromBottom = s.scrollHeight - s.scrollTop - s.clientHeight; const wasNearBottom = distFromBottom < 150; if (wasNearBottom) { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(scrollToBottom); }",
+    "effect": "DOM mutations (receipts, timestamps, online status) no longer reset scrollTop when user is reading history (scrollTop=0). Guard only allows auto-scroll when user was within 150px of bottom."
+  },
+
+  "test_report_links": ["/app/test_reports/iteration_9.json"],
+
+  "action_items": [
+    "OPTIONAL: Consider whether CometChat's scrollToBottomOnNewMessages={true} should be changed to false so that new messages from other users also respect the wasNearBottom guard. Currently our custom observer handles background mutations; CometChat's prop handles actual new message events.",
+    "MINOR: LoginPage.js inputs lack data-testid attributes (email-input, password-input, login-btn). Makes testing harder.",
+    "MINOR: Tab buttons in ChatApp.js lack data-testid attributes (tab-grupos, tab-conversas, tab-perfil). Current tests use role-based selectors as workaround."
+  ],
+
+  "critical_code_review_comments": [
+    "ChatApp.js lines 617-631: Fix CONFIRMED WORKING. wasNearBottom guard correctly prevents MutationObserver from resetting scroll during history reading.",
+    "App.css: .cometchat-list__body height:100% chain still working correctly (sh=1512 > ch=386, oy=auto).",
+    "ChatApp.js: scrollToBottomOnNewMessages={true} on CometChatMessageList is CometChat built-in — fires on actual new messages only (expected behavior). Our custom observer guard covers the non-message mutation case."
+  ],
+
+  "updated_files": [],
+
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "100% (all 12 tests pass — 4 critical scroll + 4 Maria Silva/individual chat + 4 regression)"
+  },
+
+  "mocked_apis": "Login is MOCKED — email->UID mapping in LoginPage.js MVP_USERS.",
+
+  "seed_data_creation": "Sent test message 'Teste iter9 autoscroll' in Pre-Natal group. Group now has 13+ messages (sh=1512).",
+
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "ArcaLink iteration 9. ALL SCROLL TESTS PASS. Fix confirmed: MutationObserver wasNearBottom guard in ChatApp.js lines 617-631 working correctly. .cometchat-list__body: sh=1512, ch=386, st at bottom, oy=auto. Pre-Natal group has 13+ messages. Composer input: div.cometchat-message-composer__input (contenteditable=plaintext-only). Login: dr.joao@clinica.com/senha123 (MOCKED, use demo chip 'Dr. João Silva'). URL: https://medchat-secure.preview.emergentagent.com. All regression tests (back btn, tabs, details panel) passing."
+}

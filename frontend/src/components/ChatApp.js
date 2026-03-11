@@ -614,11 +614,20 @@ function ChatApp({ onLogout }) {
     const t2 = setTimeout(scrollToBottom, 300);
     const t3 = setTimeout(scrollToBottom, 800);
 
-    // MutationObserver: dispara no próximo frame para evitar scroll no meio da renderização
+    // MutationObserver: só auto-scrolla se o usuário JÁ estava perto do fundo.
+    // Isso evita resetar o scroll quando o usuário está lendo o histórico.
+    // Tolerância de 150px: mensagens novas chegam ao fundo sem interrução.
     let rafId;
     const observer = new MutationObserver(() => {
-      cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(scrollToBottom);
+      const s = container.querySelector('.cometchat-list__body') ||
+                container.querySelector('.cometchat-message-list__body') ||
+                container;
+      const distFromBottom = s.scrollHeight - s.scrollTop - s.clientHeight;
+      const wasNearBottom  = distFromBottom < 150;
+      if (wasNearBottom) {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(scrollToBottom);
+      }
     });
     observer.observe(container, { childList: true, subtree: true });
 
