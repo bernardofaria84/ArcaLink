@@ -393,6 +393,107 @@ function EditProfileModal({ currentUser, onClose, onSaved }) {
 }
 
 /* ─────────────────────────────────────────────
+   SUB-COMPONENT: Painel de Detalhes do Chat
+   Exibe info do contato (individual) ou grupo
+   Estilo WhatsApp: desliza de cima
+───────────────────────────────────────────── */
+function DetailsPanel({ user, group, groupMembers, onClose }) {
+  const isGroup = !!group;
+  const name    = isGroup ? group.getName() : user?.getName?.() ?? '';
+  const initial = name.charAt(0).toUpperCase() || '?';
+  const roleColor = (r) => r === 'medico' ? '#2D9E6B' : '#1A4A7A';
+  const roleName  = (r) => ROLE_LABELS[r] ?? r ?? '';
+
+  return (
+    <div className="modal-overlay details-overlay" onClick={onClose}>
+      <div className="details-panel" onClick={(e) => e.stopPropagation()}>
+        {/* Handle */}
+        <div className="modal-handle" />
+
+        {/* Cabeçalho */}
+        <div className="modal-header">
+          <span className="modal-title">{isGroup ? 'Detalhes do Grupo' : 'Informações do Contato'}</span>
+          <button className="modal-close" onClick={onClose} data-testid="details-close-btn">✕</button>
+        </div>
+
+        {/* Avatar + nome */}
+        <div className="details-hero">
+          <div
+            className="details-avatar"
+            style={{ background: isGroup ? '#0A6E6E' : roleColor(user?.getRole?.()) }}
+          >
+            {initial}
+          </div>
+          <p className="details-name">{name}</p>
+          {isGroup ? (
+            <span className="details-badge teal">{groupMembers.length} membro{groupMembers.length !== 1 ? 's' : ''}</span>
+          ) : (
+            <span className="details-badge" style={{ background: `${roleColor(user?.getRole?.())}22`, color: roleColor(user?.getRole?.()) }}>
+              {roleName(user?.getRole?.())}
+            </span>
+          )}
+        </div>
+
+        {/* Info rows */}
+        <div className="details-card">
+          {!isGroup && (
+            <>
+              <div className="details-row">
+                <span className="details-row-label">Status</span>
+                <span className={`details-status-dot ${user?.getStatus?.() === 'online' ? 'online' : 'offline'}`}>
+                  {user?.getStatus?.() === 'online' ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <div className="profile-divider" />
+              <div className="details-row">
+                <span className="details-row-label">UID</span>
+                <span className="details-row-val">{user?.getUid?.()}</span>
+              </div>
+            </>
+          )}
+          {isGroup && (
+            <>
+              <div className="details-row">
+                <span className="details-row-label">Tipo</span>
+                <span className="details-row-val">Grupo Privado 🔒</span>
+              </div>
+              <div className="profile-divider" />
+              <div className="details-row">
+                <span className="details-row-label">GUID</span>
+                <span className="details-row-val" style={{ fontSize: 11 }}>{group?.getGuid?.()}</span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Lista de membros (somente grupos) */}
+        {isGroup && groupMembers.length > 0 && (
+          <div className="details-members-section">
+            <p className="details-section-title">Membros</p>
+            <div className="details-members-list">
+              {groupMembers.map((m) => (
+                <div key={m.getUid()} className="details-member-row">
+                  <div className="modal-avatar small" style={{ background: roleColor(m.getRole()) }}>
+                    {m.getName().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="modal-user-info">
+                    <span className="modal-user-name">{m.getName()}</span>
+                    <span className="modal-user-role" style={{ color: roleColor(m.getRole()) }}>
+                      {roleName(m.getRole())} · {m.getScope() === 'admin' ? 'Admin' : 'Participante'}
+                    </span>
+                  </div>
+                  <span className={`modal-status-dot ${m.getStatus?.() === 'online' ? 'online' : 'offline'}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    MAIN COMPONENT: ChatApp
 ───────────────────────────────────────────── */
 function ChatApp({ onLogout }) {
@@ -407,6 +508,8 @@ function ChatApp({ onLogout }) {
   const [showCriarGrupo, setShowCriarGrupo] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
 
   useEffect(() => {
     CometChatUIKit.getLoggedinUser().then((u) => { if (u) setLoggedUser(u); });
@@ -464,6 +567,22 @@ function ChatApp({ onLogout }) {
     openChat(null, group, 'groups');
   };
 
+  // ── Painel de Detalhes (contato / grupo) ──
+  const handleOpenDetails = useCallback(async () => {
+    if (activeGroup) {
+      try {
+        const req = new CometChat.GroupMembersRequestBuilder(activeGroup.getGuid())
+          .setLimit(100)
+          .build();
+        const members = await req.fetchNext();
+        setGroupMembers(members);
+      } catch (e) {
+        setGroupMembers([]);
+      }
+    }
+    setShowDetails(true);
+  }, [activeGroup]);
+
   const hasActiveChat = activeUser || activeGroup;
 
   // ── Auto-scroll para a última mensagem ──
@@ -476,9 +595,11 @@ function ChatApp({ onLogout }) {
     if (!container) return;
 
     const scrollToBottom = () => {
-      // Tenta encontrar o elemento scrollável interno do CometChat UIKit
+      // O elemento scrollável real do CometChat UIKit é `.cometchat-list__body`
       const scrollable =
-        container.querySelector('.cometchat-message-list') ||
+        container.querySelector('.cometchat-list__body') ||
+        container.querySelector('.cometchat-message-list__body') ||
+        container.querySelector('[class*="list__body"]') ||
         container.querySelector('[class*="message-list"]') ||
         container.firstElementChild ||
         container;
@@ -487,15 +608,24 @@ function ChatApp({ onLogout }) {
       }
     };
 
-    // Scroll inicial ao abrir o chat (aguarda o UIKit renderizar)
-    const timeout = setTimeout(scrollToBottom, 400);
+    // Scroll inicial ao abrir o chat — aguarda o UIKit renderizar (50ms + 300ms + 800ms)
+    const t1 = setTimeout(scrollToBottom, 50);
+    const t2 = setTimeout(scrollToBottom, 300);
+    const t3 = setTimeout(scrollToBottom, 800);
 
-    // Monitora novas mensagens via MutationObserver
-    const observer = new MutationObserver(scrollToBottom);
+    // MutationObserver: dispara no próximo frame para evitar scroll no meio da renderização
+    let rafId;
+    const observer = new MutationObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(scrollToBottom);
+    });
     observer.observe(container, { childList: true, subtree: true });
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      cancelAnimationFrame(rafId);
       observer.disconnect();
     };
   }, [inChatView, activeUser, activeGroup]);
@@ -511,16 +641,19 @@ function ChatApp({ onLogout }) {
             <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn">
               ←
             </button>
-            <CometChatMessageHeader
-              user={activeUser || undefined}
-              group={activeGroup || undefined}
-              onBack={handleBack}
-            />
+            <div className="chat-header-clickable" onClick={handleOpenDetails} data-testid="chat-header-details-btn">
+              <CometChatMessageHeader
+                user={activeUser || undefined}
+                group={activeGroup || undefined}
+                onBack={handleBack}
+              />
+            </div>
           </div>
           <div className="chat-view-messages" ref={messagesContainerRef}>
             <CometChatMessageList
               user={activeUser || undefined}
               group={activeGroup || undefined}
+              scrollToBottomOnNewMessages={true}
             />
           </div>
           <div className="chat-view-composer">
@@ -565,13 +698,18 @@ function ChatApp({ onLogout }) {
             <button className="chat-back-btn" onClick={handleBack} data-testid="chat-back-btn-groups">
               ←
             </button>
-            <CometChatMessageHeader
-              group={activeGroup || undefined}
-              onBack={handleBack}
-            />
+            <div className="chat-header-clickable" onClick={handleOpenDetails} data-testid="chat-header-details-btn-groups">
+              <CometChatMessageHeader
+                group={activeGroup || undefined}
+                onBack={handleBack}
+              />
+            </div>
           </div>
           <div className="chat-view-messages" ref={messagesContainerRef}>
-            <CometChatMessageList group={activeGroup || undefined} />
+            <CometChatMessageList
+              group={activeGroup || undefined}
+              scrollToBottomOnNewMessages={true}
+            />
           </div>
           <div className="chat-view-composer">
             <CometChatMessageComposer group={activeGroup || undefined} />
@@ -716,6 +854,16 @@ function ChatApp({ onLogout }) {
           currentUser={loggedUser}
           onClose={() => setShowEditProfile(false)}
           onSaved={(updatedUser) => setLoggedUser(updatedUser)}
+        />
+      )}
+
+      {/* ── Painel de Detalhes (desliza de cima) ── */}
+      {showDetails && (
+        <DetailsPanel
+          user={activeUser || null}
+          group={activeGroup || null}
+          groupMembers={groupMembers}
+          onClose={() => setShowDetails(false)}
         />
       )}
     </div>
