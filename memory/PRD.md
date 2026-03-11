@@ -60,8 +60,12 @@ Criar um aplicativo de comunicação segura para a área médica chamado ArcaLin
 - **Logout corrigido**: setTimeout 150ms para evitar React error overlay
 - **Nome de usuário atualizado**: `CometChat.updateCurrentUserDetails()` após login
 
-### ✅ Testes (iteração 2) — 100% passando (7/7)
-- Back button, logout sem erro, envio de mensagem, lista de conversas, PT-BR, grupos, login paciente
+### ✅ FASE 3 — Auto-scroll + Fix de Navegação (2026-03-11)
+- **Auto-scroll implementado**: `MutationObserver` + `setTimeout(400ms)` no `messagesContainerRef` detecta novas mensagens e faz `scrollTop = scrollHeight` automaticamente — funciona em chat individual e de grupo
+- **Fix de navegação Grupos→Voltar**: `openChat()` agora recebe parâmetro `tab` (default `'chats'`); `handleGroupItemClick` e `handleGroupCreated` passam `'groups'`, preservando a aba de origem ao pressionar Voltar
+
+### ✅ Testes (iteração 3) — 100% passando (7/7)
+- Login, auto-scroll individual, auto-scroll grupo, envio de mensagem mantém scroll no final, botão voltar, aba grupos
 
 ## Known Issues (aceitáveis)
 - Nome do contato mostra email até CometChat sincronizar (comportamento normal do SDK)

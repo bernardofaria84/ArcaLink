@@ -418,11 +418,11 @@ function ChatApp({ onLogout }) {
   const initial = userName.charAt(0).toUpperCase() || 'U';
 
   // ── Navigation handlers ──
-  const openChat = useCallback((user, group) => {
+  const openChat = useCallback((user, group, tab = 'chats') => {
     setActiveUser(user || null);
     setActiveGroup(group || null);
     setInChatView(true);
-    setActiveTab('chats');
+    setActiveTab(tab);
   }, []);
 
   const handleConversationClick = (conversation) => {
@@ -434,7 +434,7 @@ function ChatApp({ onLogout }) {
   };
 
   const handleGroupItemClick = (group) => {
-    openChat(null, group);
+    openChat(null, group, 'groups');
   };
 
   const handleBack = () => {
@@ -461,8 +461,7 @@ function ChatApp({ onLogout }) {
 
   const handleGroupCreated = (group) => {
     setShowCriarGrupo(false);
-    // Navegar direto para o grupo criado
-    openChat(null, group);
+    openChat(null, group, 'groups');
   };
 
   const hasActiveChat = activeUser || activeGroup;
