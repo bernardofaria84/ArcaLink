@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
-import { CometChat } from '@cometchat/chat-sdk-javascript';
+import { CometChatUIKit } from '@cometchat/chat-uikit-react';
 import './LoginPage.css';
 
-const AUTH_KEY = process.env.REACT_APP_COMETCHAT_AUTH_KEY;
-
-// ARCALINK: MVP — Mapeamento email → UID CometChat
 const MVP_USERS = {
   'dr.joao@clinica.com':     { uid: 'cometchat-uid-1', password: 'senha123', nome: 'Dr. João Silva', role: 'Médico' },
   'maria.silva@email.com':   { uid: 'cometchat-uid-2', password: 'senha123', nome: 'Maria Silva',    role: 'Paciente' },
@@ -35,8 +32,8 @@ function LoginPage({ onLoginSuccess }) {
         setError('E-mail ou senha incorretos.');
         return;
       }
-      // ARCALINK: MVP login — PRODUÇÃO: usar authToken do backend
-      await CometChat.login(user.uid, AUTH_KEY);
+      // ARCALINK: MVP login — usa CometChatUIKit.login() para inicializar o DataSource corretamente
+      await CometChatUIKit.login(user.uid);
       onLoginSuccess();
     } catch (err) {
       console.error('ArcaLink login error:', err);

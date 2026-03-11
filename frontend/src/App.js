@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { CometChatUIKit, UIKitSettingsBuilder } from '@cometchat/chat-uikit-react';
+import { CometChatUIKit, UIKitSettingsBuilder, CometChatLocalize } from '@cometchat/chat-uikit-react';
+// Importa CSS do CometChat ANTES dos nossos estilos para garantir que nossos overrides vençam
+import '@cometchat/chat-uikit-react/css-variables.css';
 import LoginPage from './components/LoginPage';
 import ChatApp from './components/ChatApp';
 import PhoneMockup from './components/PhoneMockup';
@@ -25,6 +27,8 @@ function App() {
 
     CometChatUIKit.init(UIKitSettings)
       .then(() => {
+        // Usa o locale PT embutido no CometChat UIKit (já tem "Hoje", "Ontem", etc.)
+        CometChatLocalize.init({ language: 'pt' });
         setIsInitialized(true);
         return CometChatUIKit.getLoggedinUser();
       })

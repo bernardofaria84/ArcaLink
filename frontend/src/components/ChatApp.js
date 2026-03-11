@@ -474,13 +474,11 @@ function ChatApp({ onLogout }) {
         // Tela de mensagens
         <div className="chat-view">
           <div className="chat-view-header">
-            <button className="back-arrow" onClick={handleBack}>←</button>
-            <div className="chat-view-header-content">
-              <CometChatMessageHeader
-                user={activeUser || undefined}
-                group={activeGroup || undefined}
-              />
-            </div>
+            <CometChatMessageHeader
+              user={activeUser || undefined}
+              group={activeGroup || undefined}
+              onBack={handleBack}
+            />
           </div>
           <div className="chat-view-messages">
             <CometChatMessageList
@@ -526,10 +524,10 @@ function ChatApp({ onLogout }) {
         // Tela de mensagens de grupo (quando vem de Grupos)
         <div className="chat-view">
           <div className="chat-view-header">
-            <button className="back-arrow" onClick={handleBack}>←</button>
-            <div className="chat-view-header-content">
-              <CometChatMessageHeader group={activeGroup || undefined} />
-            </div>
+            <CometChatMessageHeader
+              group={activeGroup || undefined}
+              onBack={handleBack}
+            />
           </div>
           <div className="chat-view-messages">
             <CometChatMessageList group={activeGroup || undefined} />

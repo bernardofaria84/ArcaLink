@@ -1,0 +1,112 @@
+{
+  "summary": "Completed full frontend UI/integration testing of ArcaLink MVP. All core flows work (login, chat, groups, profile, logout, patient login, message sending). Two critical bugs found: (1) No back button in chat view - user cannot return to conversation list, (2) React runtime error overlay on logout. Also identified display name issue: CometChat shows email addresses instead of proper names.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "CometChat API /v3.0/user_sessions",
+        "issue": "401 error logged during logout flow - user_sessions delete failing, likely causing React error overlay",
+        "priority": "MEDIUM"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ChatApp - renderChats / chat-view-header",
+        "issue": "CRITICAL: No back button rendered in CometChatMessageHeader. The onBack prop is passed but CometChat UIKit v4 does not render a back button by default. User is trapped in chat view with no way to return to conversation list. The tab bar is also hidden while in chat view (correct behavior), making this even more critical.",
+        "selector": ".chat-view-header, .cometchat-message-header",
+        "priority": "CRITICAL",
+        "fix_suggestion": "Add a custom back button element inside .chat-view-header before CometChatMessageHeader (arrow-left icon clicking handleBack). CometChat v4 does not auto-render back button - use leadingStateView prop or add a custom button overlay."
+      },
+      {
+        "component": "LoginPage / ChatApp Profile + Conversations",
+        "issue": "Display names show email addresses instead of proper names. Profile shows 'dr.joao@clinica.com' instead of 'Dr. João Silva' and 'maria.silva@email.com' instead of 'Maria Silva'. The CometChat users were created with email addresses as their display names. This affects: profile page, conversation list, and chat headers.",
+        "selector": ".profile-name, .cometchat-list-item__body-title",
+        "priority": "MEDIUM",
+        "fix_suggestion": "Update CometChat user display names via CometChat.updateCurrentUserDetails() after login, or during user creation. In MVP_USERS mapping, after CometChatUIKit.login(uid), call user update to set name from MVP_USERS[email].nome"
+      },
+      {
+        "component": "App - handleLogout",
+        "issue": "After clicking logout and confirming, a React development error overlay appears with '[object Object]' error. This happens because CometChat fires events/callbacks to unmounted components after logout. The CometChatUIKit.logout() causes CometChat SDK to emit events that React components are no longer mounted to receive.",
+        "selector": "React error boundary overlay",
+        "priority": "HIGH",
+        "fix_suggestion": "Wrap CometChatUIKit.logout() call in try-catch. Also ensure all CometChat listeners are removed before calling logout. The error overlay only shows in development mode but the underlying error should be fixed."
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Chat navigation back to list",
+        "issue": "After entering chat view, bottom tab bar is hidden and no back button exists in header. Users cannot navigate back to conversation list without refreshing the page.",
+        "affected_selectors": [".chat-view-header", ".mobile-tab-bar"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Chat Header",
+        "issues": [
+          "PT-BR grammar: 'Visto por último 1 minutos atrás' - should be '1 minuto' (singular). This is from CometChat's PT localization - may need custom override."
+        ]
+      },
+      {
+        "screen": "Conversation list",
+        "issues": [
+          "Contact names showing email addresses (e.g., 'maria.silva@email.com') instead of full names - design/data issue"
+        ]
+      }
+    ]
+  },
+  "tests_passed": {
+    "1_login_demo_buttons": "PASS - Both Dr. João and Maria Silva demo buttons fill email/password correctly",
+    "1_login_entrar": "PASS - Login with CometChatUIKit.login(uid) works for both users",
+    "2_conversation_list": "PASS - Shows conversation list with circular teal avatars, contact names, message previews, timestamps",
+    "2_no_chats_header_duplicate": "PASS - CometChat internal 'Chats' header is hidden (display:none via CSS override)",
+    "3_chat_view_header": "PASS - Teal header (rgb(10,110,110)) with avatar, contact name, PT-BR last seen text",
+    "3_chat_view_background": "PASS - Message list background rgb(236,229,221) = WhatsApp #ECE5DD style",
+    "3_date_separator": "PASS - Shows 'Hoje' in PT-BR",
+    "3_outgoing_bubble": "PASS - Outgoing bubbles teal rgb(10,110,110) with correct border-radius 8px 0 8px 8px",
+    "4_composer_placeholder": "PASS - 'Digite sua mensagem aqui' placeholder in PT-BR",
+    "4_composer_buttons": "PASS - +, microphone, emoji, sticker, teal circular send button visible",
+    "5_tabs_navigation": "PASS - Conversas, Grupos, Perfil tabs all navigate correctly",
+    "5_back_button": "FAIL - No back button rendered in chat view header - user trapped",
+    "6_grupos_tab": "PASS - Shows group list with correct groups, + button visible for médico only",
+    "7_perfil_tab": "PASS - Shows profile info with UID, Tipo de Conta, Editar Perfil and Sair buttons",
+    "8_logout_flow": "PARTIAL - Logout modal appears correctly, logout completes, returns to login BUT React error overlay appears",
+    "9_patient_login": "PASS - Maria Silva logs in with same interface, correct patient permissions (+button hidden in groups)",
+    "10_send_message": "PASS - Messages sent and appear as teal outgoing bubbles"
+  },
+  "test_report_links": ["/app/test_reports/iteration_1.json"],
+  "action_items": [
+    "CRITICAL: Add a back button to the chat view header (in .chat-view-header div, before CometChatMessageHeader) - CometChat v4 does not auto-render back button",
+    "HIGH: Fix React error overlay after logout - wrap CometChatUIKit.logout() in better error handling, ensure CometChat listeners are removed before logout",
+    "MEDIUM: Update CometChat user display names to use proper names (not email) - call updateCurrentUserDetails after login to set name from MVP_USERS[email].nome",
+    "LOW: PT-BR grammar fix: '1 minutos atrás' -> '1 minuto atrás' (this comes from CometChat localization strings, may need custom translation override)"
+  ],
+  "critical_code_review_comments": [
+    "ChatApp.js: onBack prop is passed to CometChatMessageHeader but CometChat UIKit v4 does NOT render a back button by default. A custom back button needs to be added. The chat-view-header div should contain a back arrow button that calls handleBack().",
+    "LoginPage.js: After CometChatUIKit.login(uid), the user's CometChat display name is not updated to the friendly name from MVP_USERS. This should be fixed by calling updateCurrentUserDetails after login.",
+    "App.js handleLogout: CometChatUIKit.logout() error is silently swallowed with catch(()=>{}) but the error is propagating to React components causing the error overlay. Better cleanup is needed."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - frontend only test",
+    "frontend": "80% (8/10 features fully working, 2 with critical issues)"
+  },
+  "mocked_apis": "Login flow is MOCKED - email->UID mapping in frontend (MVP_USERS in LoginPage.js), no real password validation, no backend auth",
+  "seed_data_creation": "No seed data created. Test message 'Teste ArcaLink!' sent to dr.joao<->maria.silva conversation during testing.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "App is ArcaLink - medical chat app using CometChat UIKit v4 React. Login uses CometChatUIKit.login(uid) via email->UID mapping (MOCKED). CometChat App ID: 1676216c370017025, Region: US. Main flows all work except: (1) No back button in chat view - need custom back button in .chat-view-header, (2) React error on logout. Display names in CometChat are email addresses instead of real names. The phone mockup wraps the actual app in PhoneMockup component - login/chat are inside the phone frame.",
+  "rca_of_issues": {
+    "back_button_missing": {
+      "root_cause": "CometChat UIKit v4 React CometChatMessageHeader component does NOT render a built-in back button. The onBack prop is accepted but only fires if the back button is rendered - which requires either a custom implementation or specific CometChat props to enable it.",
+      "reproduction": "Login as any user -> click any conversation -> observe no back arrow in header, tab bar is hidden",
+      "mitigation": "Add a custom back button in the .chat-view-header div: <button onClick={handleBack} className='chat-back-btn'>←</button> before CometChatMessageHeader"
+    },
+    "logout_react_error": {
+      "root_cause": "CometChat SDK continues to emit presence/connection events after CometChatUIKit.logout() is called. React components are already unmounted at this point (isLoggedIn set to false), causing 'setState on unmounted component' type errors.",
+      "reproduction": "Login -> Profile tab -> Sair da conta -> Confirm -> React error overlay appears",
+      "mitigation": "In App.js handleLogout: set isLoggedIn to false AFTER awaiting CometChatUIKit.logout() completes. Or add a short delay. Also ensure CometChat listeners are removed before logout."
+    }
+  }
+}
