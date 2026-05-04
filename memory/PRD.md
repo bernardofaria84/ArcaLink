@@ -66,8 +66,22 @@ Criar um aplicativo de comunicação segura para a área médica chamado ArcaLin
 - **Fix 2 (`ChatApp.css`)**: overrides forçando `flex: 1 1 0`, `min-height: 0`, `max-height: 100%` em todo o chain de wrappers (`.chat-view-messages > .cometchat`, `.cometchat-message-list`, `.cometchat-message-list__body`, `.cometchat-list`, `.cometchat-list__body`). O body interno mantém `overflow-y: auto`.
 - **Validado**: container constrito a 504px com scroll interno; após 10 mensagens novas, scrollHeight=2146px, scrollTop=1642px, atBottom=True.
 
-### ✅ Testes (iteração 2) — 100% passando (7/7)
-- Back button, logout sem erro, envio de mensagem, lista de conversas, PT-BR, grupos, login paciente
+### ✅ FASE 4 — Recibos azuis + Typing destacado + Tema RN sincronizado (2026-05-04)
+**Web Preview**:
+- Recibo "lida" azul WhatsApp via override `:root { --cometchat-message-seen-color: #53BDEB; }`
+- Selector correto identificado: `.cometchat-message-bubble__status-info-view-receipts-read .cometchat-message-list__receipt` (CometChat web usa CSS masks SVG, não classes `--read`).
+- Typing indicator no header destacado: `#B2EFEF` itálico bold em `.cometchat-message-header__subtitle-typing`.
+- Validado em runtime: `seenColorVar='#53BDEB'`, recibo lida = `rgb(83,189,235)`, recibo enviada = branco translúcido.
+
+**React Native (`/app/arcalink/examples/SampleApp/App.tsx`)**:
+- Tema WhatsApp aplicado via `arcaWhatsAppOverride` em `messageListStyles` + `messageHeaderStyles` + `receiptStyles`:
+  - Fundo areia `#ECE5DD`, balão saída teal `#0A6E6E`, balão entrada branco
+  - Header teal `#0A6E6E` com texto branco; typing italic `#B2EFEF`
+  - `receiptStyles.readIconStyle.tintColor = '#53BDEB'` (azul WhatsApp)
+- Spread em ambos `light` e `dark` do `CometChatThemeProvider`.
+- Já existentes (sessão anterior): `CometChatUIKit.login`, `CometChatI18nProvider language="pt"` com pt-BR (166 chaves), config.json com `typingIndicator: true` e `messageDeliveryAndReadReceipts: true`.
+
+⚠️ **App nativo NÃO compilado/testado em emulador** — apenas o tema TypeScript foi atualizado.
 
 ## Known Issues (aceitáveis)
 - Nome do contato mostra email até CometChat sincronizar (comportamento normal do SDK)

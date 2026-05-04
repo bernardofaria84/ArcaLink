@@ -132,12 +132,18 @@
   color: #9E9E9E !important;
 }
 
-/* Receipts (checkmarks) na bolha de saída */
-.cometchat-message-bubble-outgoing .cometchat-receipt {
-  background: rgba(255,255,255,0.8) !important;
+/* Cor do recibo "lida" (✓✓ azul WhatsApp) */
+:root {
+  --cometchat-message-seen-color: #53BDEB;
 }
-.cometchat-message-bubble-outgoing .cometchat-receipt--read {
-  background: #ACE1E1 !important;
+
+/* Receipts (checkmarks) na bolha de saída */
+.cometchat-message-bubble-outgoing .cometchat-message-list__receipt {
+  background: rgba(255,255,255,0.85) !important;
+}
+/* Recibo "lida" (✓✓ azul estilo WhatsApp) — sobrescreve o verde padrão */
+.cometchat-message-bubble__status-info-view-receipts-read .cometchat-message-list__receipt {
+  background: #53BDEB !important;
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -198,6 +204,14 @@
 .chat-view-header .cometchat-list-item__body-subtitle {
   color: rgba(255,255,255,0.82) !important;
   font-size: 12px !important;
+}
+
+/* Indicador "digitando..." no header do chat — destaque WhatsApp */
+.chat-view-header .cometchat-message-header__subtitle-typing,
+.chat-view-header .cometchat-message-header__subtitle.cometchat-message-header__subtitle-typing {
+  color: #B2EFEF !important;
+  font-style: italic !important;
+  font-weight: 600 !important;
 }
 
 /* Avatar no header */
