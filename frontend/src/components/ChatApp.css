@@ -162,12 +162,36 @@
 }
 
 .chat-view-messages {
-  flex: 1;
-  overflow: hidden;
+  flex: 1 1 0;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.chat-view-messages > * { height: 100%; }
+/* Força todo o chain de wrappers do CometChat a respeitar a altura do container,
+   permitindo que .cometchat-list__body faça o scroll interno (estilo WhatsApp). */
+.chat-view-messages > .cometchat,
+.chat-view-messages .cometchat-message-list,
+.chat-view-messages .cometchat-message-list__body,
+.chat-view-messages .cometchat-message-list__body > .cometchat,
+.chat-view-messages .cometchat-list {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* O body interno é o container que de fato faz o scroll vertical */
+.chat-view-messages .cometchat-list__body {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+}
 
 .chat-view-composer {
   flex-shrink: 0;

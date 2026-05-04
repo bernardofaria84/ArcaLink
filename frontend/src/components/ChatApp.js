@@ -488,6 +488,7 @@ function ChatApp({ onLogout }) {
             <CometChatMessageList
               user={activeUser || undefined}
               group={activeGroup || undefined}
+              scrollToBottomOnNewMessages={true}
             />
           </div>
           <div className="chat-view-composer">
@@ -538,7 +539,10 @@ function ChatApp({ onLogout }) {
             />
           </div>
           <div className="chat-view-messages">
-            <CometChatMessageList group={activeGroup || undefined} />
+            <CometChatMessageList
+              group={activeGroup || undefined}
+              scrollToBottomOnNewMessages={true}
+            />
           </div>
           <div className="chat-view-composer">
             <CometChatMessageComposer group={activeGroup || undefined} />

@@ -60,6 +60,12 @@ Criar um aplicativo de comunicação segura para a área médica chamado ArcaLin
 - **Logout corrigido**: setTimeout 150ms para evitar React error overlay
 - **Nome de usuário atualizado**: `CometChat.updateCurrentUserDetails()` após login
 
+### ✅ FASE 3 — Auto-scroll WhatsApp-style (2026-05-04)
+- **Problema**: lista de mensagens não fazia scroll para a última, e o wrapper `.cometchat` interno crescia além dos limites do container (1418px num espaço de 504px).
+- **Fix 1 (`ChatApp.js`)**: prop `scrollToBottomOnNewMessages={true}` em ambos `<CometChatMessageList>` (chat individual + grupo).
+- **Fix 2 (`ChatApp.css`)**: overrides forçando `flex: 1 1 0`, `min-height: 0`, `max-height: 100%` em todo o chain de wrappers (`.chat-view-messages > .cometchat`, `.cometchat-message-list`, `.cometchat-message-list__body`, `.cometchat-list`, `.cometchat-list__body`). O body interno mantém `overflow-y: auto`.
+- **Validado**: container constrito a 504px com scroll interno; após 10 mensagens novas, scrollHeight=2146px, scrollTop=1642px, atBottom=True.
+
 ### ✅ Testes (iteração 2) — 100% passando (7/7)
 - Back button, logout sem erro, envio de mensagem, lista de conversas, PT-BR, grupos, login paciente
 
